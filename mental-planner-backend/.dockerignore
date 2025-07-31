@@ -1,0 +1,8 @@
+.gradle
+.idea
+.settings
+gradle-wrapper.jar
+gradle-wrapper.properties
+*.log
+.git
+.github
