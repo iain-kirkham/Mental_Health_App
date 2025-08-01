@@ -23,21 +23,32 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class PomodoroSessionControllerTest {
-    @Mock // Now mock the PomodoroSessionService
+    @Mock
     private PomodoroSessionService pomodoroSessionService;
 
     @InjectMocks
     private PomodoroSessionController pomodoroSessionController;
 
-    // DTOs for testing
+    // Test data objects - recreated before each test for isolation
     private PomodoroSessionCreationDTO testCreationDTO;
     private PomodoroSessionResponseDTO testResponseDTO;
-    private PomodoroSessionCreationDTO updateCreationDTO; // For update requests
+    private PomodoroSessionCreationDTO updateCreationDTO;
     private PomodoroSessionResponseDTO updatedResponseDTO;
 
+    /**
+     * Sets up test data before each test method.
+     *
+     * Creates realistic test objects representing:
+     * - Client input (CreationDTO) - what would come from frontend
+     * - Service responses (ResponseDTO) - what service layer returns
+     * - Update scenarios with modified values
+     *
+     * Using fresh objects per test prevents test pollution and ensures
+     * each test starts with a clean state.
+     */
     @BeforeEach
     void setUp() {
-        // Setup for Creation DTO
+        // Standard 25-minute pomodoro session input from client
         testCreationDTO = new PomodoroSessionCreationDTO();
         testCreationDTO.setStartTime(Instant.now());
         testCreationDTO.setEndTime(Instant.now().plusSeconds(25 * 60));
@@ -45,7 +56,7 @@ class PomodoroSessionControllerTest {
         testCreationDTO.setScore((short) 4);
         testCreationDTO.setNotes("Focused work session.");
 
-        // Setup for Response DTO (what the service would return after creation/fetch)
+        // Expected service response after successful creation/retrieval
         testResponseDTO = new PomodoroSessionResponseDTO();
         testResponseDTO.setId(1L);
         testResponseDTO.setStartTime(testCreationDTO.getStartTime());
@@ -54,7 +65,7 @@ class PomodoroSessionControllerTest {
         testResponseDTO.setScore(testCreationDTO.getScore());
         testResponseDTO.setNotes(testCreationDTO.getNotes());
 
-        // Setup for Update Creation DTO (what the client sends for update)
+        // Modified data for update operations testing
         updateCreationDTO = new PomodoroSessionCreationDTO();
         updateCreationDTO.setStartTime(Instant.now().minusSeconds(10)); // Slight change
         updateCreationDTO.setEndTime(Instant.now().plusSeconds(30 * 60)); // Longer duration
@@ -62,7 +73,7 @@ class PomodoroSessionControllerTest {
         updateCreationDTO.setScore((short) 5); // Improved score
         updateCreationDTO.setNotes("Even more focused work session, extended!");
 
-        // Setup for Updated Response DTO (what the service would return after update)
+        // Expected service response after successful update
         updatedResponseDTO = new PomodoroSessionResponseDTO();
         updatedResponseDTO.setId(1L);
         updatedResponseDTO.setStartTime(updateCreationDTO.getStartTime());
@@ -74,32 +85,34 @@ class PomodoroSessionControllerTest {
 
     @Test
     void createPomodoroSession_ShouldReturnCreatedSession() {
-        // Arrange
+        // Arrange: Mock service to return successful creation response
         when(pomodoroSessionService.createPomodoroSession(any(PomodoroSessionCreationDTO.class)))
                 .thenReturn(testResponseDTO);
 
-        // Act
+        // Act: Call controller endpoint
         ResponseEntity<PomodoroSessionResponseDTO> response = pomodoroSessionController.createPomodoroSession(testCreationDTO);
 
-        // Assert
+        // Assert: Verify HTTP contract and data integrity
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getId()).isEqualTo(testResponseDTO.getId());
         assertThat(response.getBody().getDuration()).isEqualTo(testResponseDTO.getDuration());
         assertThat(response.getBody().getNotes()).isEqualTo(testResponseDTO.getNotes());
+
+        // Verify service interaction
         verify(pomodoroSessionService, times(1)).createPomodoroSession(testCreationDTO);
     }
 
     @Test
     void getAllPomodoroSessions_ShouldReturnAllSessions() {
-        // Arrange
+        // Arrange: Mock service to return multiple session
         List<PomodoroSessionResponseDTO> expectedDtos = Arrays.asList(testResponseDTO, new PomodoroSessionResponseDTO());
         when(pomodoroSessionService.getAllPomodoroSessions()).thenReturn(expectedDtos);
 
-        // Act
+        // Act: Call controller endpoint
         ResponseEntity<List<PomodoroSessionResponseDTO>> response = pomodoroSessionController.getAllPomodoroSessions();
 
-        // Assert
+        // Assert: Verify response structure and content
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody()).hasSize(2);
@@ -108,13 +121,13 @@ class PomodoroSessionControllerTest {
 
     @Test
     void getAllPomodoroSessions_ShouldReturnNoContentWhenEmpty() {
-        // Arrange
+        // Arrange: Mock service to return empty list
         when(pomodoroSessionService.getAllPomodoroSessions()).thenReturn(Collections.emptyList());
 
-        // Act
+        // Act: Call controller endpoint
         ResponseEntity<List<PomodoroSessionResponseDTO>> response = pomodoroSessionController.getAllPomodoroSessions();
 
-        // Assert
+        // Assert: Verify empty response handling
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         assertThat(response.getBody()).isNull();
         verify(pomodoroSessionService, times(1)).getAllPomodoroSessions();
@@ -122,13 +135,13 @@ class PomodoroSessionControllerTest {
 
     @Test
     void getPomodoroSessionById_ShouldReturnSessionWhenFound() {
-        // Arrange
+        // Arrange: Mock service to return specific session
         when(pomodoroSessionService.getPomodoroSessionById(anyLong())).thenReturn(testResponseDTO);
 
-        // Act
+        // Act: Call controller endpoint with specific ID
         ResponseEntity<PomodoroSessionResponseDTO> response = pomodoroSessionController.getPomodoroSessionById(1L);
 
-        // Assert
+        // Assert: Verify successful retrieval
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getId()).isEqualTo(testResponseDTO.getId());
@@ -137,24 +150,24 @@ class PomodoroSessionControllerTest {
 
     @Test
     void getPomodoroSessionById_ShouldReturnNotFoundWhenNotFound() {
-        // Arrange
+        // Arrange: Mock service to throw exception for missing resource
         when(pomodoroSessionService.getPomodoroSessionById(anyLong())).thenThrow(new ResourceNotFoundException("Session not found"));
 
-        // Act & Assert
+        // Act & Assert: Verify exception handling
         assertThrows(ResourceNotFoundException.class, () -> pomodoroSessionController.getPomodoroSessionById(99L));
         verify(pomodoroSessionService, times(1)).getPomodoroSessionById(99L);
     }
 
     @Test
     void updatePomodoroSession_ShouldReturnUpdatedSessionWhenFound() {
-        // Arrange
+        // Arrange: Mock service to return updated session
         when(pomodoroSessionService.updatePomodoroSession(anyLong(), any(PomodoroSessionCreationDTO.class)))
                 .thenReturn(updatedResponseDTO);
 
-        // Act
+        // Act: Call controller update endpoint
         ResponseEntity<PomodoroSessionResponseDTO> response = pomodoroSessionController.updatePomodoroSession(1L, updateCreationDTO);
 
-        // Assert
+        // Assert: Verify update success and data changes
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getId()).isEqualTo(updatedResponseDTO.getId());
@@ -166,24 +179,24 @@ class PomodoroSessionControllerTest {
 
     @Test
     void updatePomodoroSession_ShouldReturnNotFoundWhenNotFound() {
-        // Arrange
+        // Arrange: Mock service to throw exception for missing resource
         when(pomodoroSessionService.updatePomodoroSession(anyLong(), any(PomodoroSessionCreationDTO.class)))
                 .thenThrow(new ResourceNotFoundException("Session not found for update"));
 
-        // Act & Assert
+        // Act & Assert: Verify exception handling
         assertThrows(ResourceNotFoundException.class, () -> pomodoroSessionController.updatePomodoroSession(99L, updateCreationDTO));
         verify(pomodoroSessionService, times(1)).updatePomodoroSession(99L, updateCreationDTO);
     }
 
     @Test
     void deletePomodoroSession_ShouldReturnNoContentWhenFound() {
-        // Arrange
+        // Arrange: Mock service to complete deletion without error
         doNothing().when(pomodoroSessionService).deletePomodoroSession(anyLong());
 
-        // Act
+        // Act: Call controller delete endpoint
         ResponseEntity<Void> response = pomodoroSessionController.deletePomodoroSession(1L);
 
-        // Assert
+        // Assert: Verify successful deletion response
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         verify(pomodoroSessionService, times(1)).deletePomodoroSession(1L);
     }

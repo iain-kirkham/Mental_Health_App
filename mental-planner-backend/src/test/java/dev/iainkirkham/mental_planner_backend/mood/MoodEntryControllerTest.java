@@ -32,21 +32,31 @@ class MoodEntryControllerTest {
 
     private MoodEntry testMoodEntry;
 
-    // prepare DTO for testing
+    // Test data representing different mood entry scenarios
     private MoodEntryCreationDTO testCreationDTO;
     private MoodEntryResponseDTO testResponseDTO;
     private MoodEntryResponseDTO updatedResponseDTO;
 
+    /**
+     * Initializes test data before each test execution.
+     *
+     * Creates realistic test objects representing:
+     * - Client mood entry input with factors and notes
+     * - Service layer responses with generated IDs
+     * - Update scenarios with improved mood states
+     *
+     * Fresh objects prevent test interference and ensure isolation.
+     */
     @BeforeEach
     void setUp() {
-        // Creation DTO
+        // Simulates challenging day mood entry from client
         testCreationDTO = new MoodEntryCreationDTO();
         testCreationDTO.setMoodScore((short) 4);
         testCreationDTO.setDateTime(Instant.now());
         testCreationDTO.setFactors(Arrays.asList("Work", "Stress"));
         testCreationDTO.setNotes("Had a tough day.");
 
-        // Setup for Response DTO with a standard response
+        // Expected service response after successful creation
         testResponseDTO = new MoodEntryResponseDTO();
         testResponseDTO.setId(1L);
         testResponseDTO.setMoodScore((short) 4);
@@ -54,7 +64,7 @@ class MoodEntryControllerTest {
         testResponseDTO.setFactors(Arrays.asList("Work", "Stress"));
         testResponseDTO.setNotes("Had a tough day.");
 
-        // Setup for updated Response DTO
+        // Improved mood state for update testing
         updatedResponseDTO = new MoodEntryResponseDTO();
         updatedResponseDTO.setId(1L);
         updatedResponseDTO.setMoodScore((short) 5);
@@ -65,13 +75,13 @@ class MoodEntryControllerTest {
 
     @Test
     void createMoodEntry_ShouldReturnCreatedMoodEntry() {
-        // Arrange: Service's create method returns a MoodEntryResponseDTO
+        // Arrange: Mock service to simulate successful creation
         when(moodEntryService.createMoodEntry(any(MoodEntryCreationDTO.class))).thenReturn(testResponseDTO);
 
-        // Act
+        // Act: Call controller creation endpoint
         ResponseEntity<MoodEntryResponseDTO> response = moodEntryController.createMoodEntry(testCreationDTO);
 
-        // Assert
+        // Assert: Verify creation success and data integrity
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getId()).isEqualTo(testResponseDTO.getId());
@@ -83,14 +93,14 @@ class MoodEntryControllerTest {
 
     @Test
     void getAllMoodEntries_ShouldReturnAllMoodEntries() {
-        // Arrange: Service's getAll method returns a list of MoodEntryResponseDTOs
+        // Arrange: Mock service to return multiple mood entries
         List<MoodEntryResponseDTO> expectedDtos = Arrays.asList(testResponseDTO, new MoodEntryResponseDTO()); // Add another dummy DTO
         when(moodEntryService.getAllMoodEntries()).thenReturn(expectedDtos);
 
-        // Act
+        // Act: Call controller list endpoint
         ResponseEntity<List<MoodEntryResponseDTO>> response = moodEntryController.getAllMoodEntries();
 
-        // Assert
+        // Assert: Verify response structure and content
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody()).hasSize(2);
@@ -100,27 +110,27 @@ class MoodEntryControllerTest {
 
     @Test
     void getAllMoodEntries_ShouldReturnNoContentWhenEmpty() {
-        // Arrange: Service returns an empty list
+        // Arrange: Mock service to return empty collection
         when(moodEntryService.getAllMoodEntries()).thenReturn(Collections.emptyList());
 
-        // Act
+        // Act: Call controller list endpoint
         ResponseEntity<List<MoodEntryResponseDTO>> response = moodEntryController.getAllMoodEntries();
 
-        // Assert
+        // Assert: Verify empty response handling
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
-        assertThat(response.getBody()).isNull(); // Body should be null for NO_CONTENT
+        assertThat(response.getBody()).isNull();
         verify(moodEntryService, times(1)).getAllMoodEntries();
     }
 
     @Test
     void getMoodEntryById_ShouldReturnMoodEntryWhenFound() {
-        // Arrange: Service's getById method returns a MoodEntryResponseDTO
+        // Arrange: Mock service to return specific mood entry
         when(moodEntryService.getMoodEntryById(anyLong())).thenReturn(testResponseDTO);
 
-        // Act
+        // Act: Call controller get-by-id endpoint
         ResponseEntity<MoodEntryResponseDTO> response = moodEntryController.getMoodEntryById(1L);
 
-        // Assert
+        // Assert: Verify successful retrieval
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getId()).isEqualTo(testResponseDTO.getId());
@@ -129,7 +139,7 @@ class MoodEntryControllerTest {
 
     @Test
     void getMoodEntryById_ShouldReturnNotFoundWhenNotFound() {
-        // Arrange: Service throws ResourceNotFoundException
+        // Arrange: Mock service to throw not found exception
         when(moodEntryService.getMoodEntryById(anyLong())).thenThrow(new ResourceNotFoundException("Not found"));
 
         // Act & Assert: Expect the controller to propagate the 404 status via @ResponseStatus
@@ -140,13 +150,13 @@ class MoodEntryControllerTest {
 
     @Test
     void updateMoodEntry_ShouldReturnUpdatedMoodEntryWhenFound() {
-        // Arrange: Service's update method returns the updated MoodEntryResponseDTO
+        // Arrange: Mock service to return updated mood entry
         when(moodEntryService.updateMoodEntry(anyLong(), any(MoodEntryCreationDTO.class))).thenReturn(updatedResponseDTO);
 
-        // Act
+        // Act: Call controller update endpoint
         ResponseEntity<MoodEntryResponseDTO> response = moodEntryController.updateMoodEntry(1L, testCreationDTO); // Using testCreationDTO as update input
 
-        // Assert
+        // Assert: Verify update success and data changes
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getId()).isEqualTo(updatedResponseDTO.getId());
@@ -157,34 +167,34 @@ class MoodEntryControllerTest {
 
     @Test
     void updateMoodEntry_ShouldReturnNotFoundWhenNotFound() {
-        // Arrange: Service throws ResourceNotFoundException for update
+        // Arrange: Mock service to throw exception for missing resource
         when(moodEntryService.updateMoodEntry(anyLong(), any(MoodEntryCreationDTO.class)))
                 .thenThrow(new ResourceNotFoundException("Not found for update"));
 
-        // Act & Assert
+        // Act & Assert: Verify exception handling
         assertThrows(ResourceNotFoundException.class, () -> moodEntryController.updateMoodEntry(99L, testCreationDTO));
         verify(moodEntryService, times(1)).updateMoodEntry(99L, testCreationDTO);
     }
 
     @Test
     void deleteMoodEntry_ShouldReturnNoContentWhenFound() {
-        // Arrange: Service's delete method returns void
+        // Arrange: Mock service to complete deletion without error
         doNothing().when(moodEntryService).deleteMoodEntry(anyLong());
 
-        // Act
+        // Act: Call controller delete endpoint
         ResponseEntity<Void> response = moodEntryController.deleteMoodEntry(1L);
 
-        // Assert
+        // Assert: Verify successful deletion response
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         verify(moodEntryService, times(1)).deleteMoodEntry(1L);
     }
 
     @Test
     void deleteMoodEntry_ShouldReturnNotFoundWhenNotFound() {
-        // Arrange: Service throws ResourceNotFoundException for delete
+        // Arrange: Mock service to throw exception for missing resource
         doThrow(new ResourceNotFoundException("Not found for delete")).when(moodEntryService).deleteMoodEntry(anyLong());
 
-        // Act & Assert
+        // Act & Assert: Verify exception handling
         assertThrows(ResourceNotFoundException.class, () -> moodEntryController.deleteMoodEntry(99L));
         verify(moodEntryService, times(1)).deleteMoodEntry(99L);
     }

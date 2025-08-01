@@ -33,7 +33,12 @@ class MoodEntryIntegrationTest {
     @Autowired
     private MoodEntryRepository moodEntryRepository;
 
-    // Helper method to create a MoodEntry in the DB directly for test setup
+    /**
+     * Creates a mood entry directly in the database for test setup purposes.
+     *
+     * @param notesSuffix A unique suffix to append to the notes field for test identification
+     * @return The persisted MoodEntry entity with generated ID
+     */
     private MoodEntry createTestMoodEntryInDb(String notesSuffix) {
         MoodEntry moodEntry = new MoodEntry();
         moodEntry.setMoodScore((short) 3);
@@ -43,6 +48,10 @@ class MoodEntryIntegrationTest {
         return moodEntryRepository.save(moodEntry);
     }
 
+    /**
+     * Ensures a clean database state before and after each test.
+     * This prevents test interference and maintains isolation.
+     */
     @BeforeEach
     @AfterEach
     void cleanUp() {
@@ -51,21 +60,21 @@ class MoodEntryIntegrationTest {
 
     @Test
     void shouldCreateMoodEntry() {
-        // Given - now create a DTO for the request
+        // Arrange: Prepare a new mood entry creation request with sample data
         MoodEntryCreationDTO newMoodEntryDTO = new MoodEntryCreationDTO();
         newMoodEntryDTO.setMoodScore((short) 4);
         newMoodEntryDTO.setDateTime(Instant.now());
         newMoodEntryDTO.setFactors(Arrays.asList("Sunshine", "Good Sleep"));
         newMoodEntryDTO.setNotes("Feeling good!");
 
-        // When - post the DTO and expect a ResponseDTO
+        // Act: Send POST request to create mood entry and expect response DTO
         ResponseEntity<MoodEntryResponseDTO> response = restTemplate.postForEntity(
                 "/api/mood",
-                newMoodEntryDTO, // Sending CreationDTO
-                MoodEntryResponseDTO.class // Expecting ResponseDTO
+                newMoodEntryDTO, // Request body: CreationDTO
+                MoodEntryResponseDTO.class // Expected response type: ResponseDTO
         );
 
-        // Then
+        // Assert: Verify successful creation with HTTP 201 and correct response data
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getId()).isNotNull();
@@ -74,7 +83,7 @@ class MoodEntryIntegrationTest {
         assertThat(response.getBody().getFactors()).containsExactly("Sunshine", "Good Sleep");
         assertThat(response.getBody().getNotes()).isEqualTo("Feeling good!");
 
-        // Verify it's persisted in the database as an actual Entity
+        // Assert: Verify the mood entry was actually persisted to the database
         Optional<MoodEntry> persistedEntity = moodEntryRepository.findById(response.getBody().getId());
         assertThat(persistedEntity).isPresent();
         assertThat(persistedEntity.get().getMoodScore()).isEqualTo((short) 4);
@@ -83,23 +92,24 @@ class MoodEntryIntegrationTest {
 
     @Test
     void shouldGetAllMoodEntries() {
-        // Given
+        // Arrange: Create test data - two mood entries with different identifiers
         createTestMoodEntryInDb("1");
         createTestMoodEntryInDb("2");
 
-        // When - now expect a List of ResponseDTOs
+        // Act: Send GET request to retrieve all mood entries as response DTOs
         ResponseEntity<List<MoodEntryResponseDTO>> response = restTemplate.exchange(
                 "/api/mood",
                 HttpMethod.GET,
-                null, // No request body for GET
+                null, // No request body required for GET operation
                 new ParameterizedTypeReference<List<MoodEntryResponseDTO>>() {} // Use ResponseDTO
         );
 
-        // Then
+        // Assert: Verify successful retrieval with correct count and data structure
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody()).hasSize(2);
-        // Assert that the items in the list are of the correct DTO type and have expected data
+
+        // Assert: Verify the returned items are properly formatted ResponseDTOs with expected content
         assertThat(response.getBody().get(0).getId()).isNotNull();
         assertThat(response.getBody().get(0).getMoodScore()).isEqualTo((short) 3);
         assertThat(response.getBody().get(0).getNotes()).contains("Integration test entry");
@@ -107,16 +117,16 @@ class MoodEntryIntegrationTest {
 
     @Test
     void shouldGetMoodEntryById() {
-        // Given
+        // Arrange: Create a specific mood entry to retrieve by ID
         MoodEntry existingMoodEntity = createTestMoodEntryInDb("for lookup");
 
-        // When - now expect a ResponseDTO
+        // Act: Send GET request for specific mood entry by ID, expecting response DTO
         ResponseEntity<MoodEntryResponseDTO> response = restTemplate.getForEntity(
                 "/api/mood/" + existingMoodEntity.getId(),
-                MoodEntryResponseDTO.class // Expecting ResponseDTO
+                MoodEntryResponseDTO.class // Expected response type: ResponseDTO
         );
 
-        // Then
+        // Assert: Verify successful retrieval with matching data from database entity
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getId()).isEqualTo(existingMoodEntity.getId());
@@ -126,36 +136,37 @@ class MoodEntryIntegrationTest {
 
     @Test
     void shouldReturnNotFoundForNonExistentMoodEntry() {
-        // When
+        // Act: Attempt to retrieve mood entry using non-existent ID
         ResponseEntity<MoodEntryResponseDTO> response = restTemplate.getForEntity(
                 "/api/mood/999", // Non-existent ID
                 MoodEntryResponseDTO.class
         );
 
-        // Then
+        // Assert: Verify proper HTTP 404 Not Found response for missing resource
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     @Test
     void shouldUpdateMoodEntry() {
-        // Given
+        // Arrange: Create existing mood entry in database to update
         MoodEntry existingMoodEntity = createTestMoodEntryInDb("to be updated"); // Still create entity in DB
 
+        // Arrange: Prepare update data with modified values
         MoodEntryCreationDTO updateDTO = new MoodEntryCreationDTO(); // Create DTO for update request
         updateDTO.setMoodScore((short) 5);
         updateDTO.setDateTime(Instant.now().plusSeconds(60));
         updateDTO.setFactors(Arrays.asList("Success", "Good Food"));
         updateDTO.setNotes("Feeling amazing after update!");
 
-        // When
+        // Act: Send PUT request to update existing mood entry
         ResponseEntity<MoodEntryResponseDTO> response = restTemplate.exchange(
                 "/api/mood/" + existingMoodEntity.getId(),
                 HttpMethod.PUT,
-                new HttpEntity<>(updateDTO), // Send CreationDTO/UpdateDTO as the request body
-                MoodEntryResponseDTO.class // Expecting ResponseDTO
+                new HttpEntity<>(updateDTO), // Request body: CreationDTO with updated values
+                MoodEntryResponseDTO.class // Expected response type: ResponseDTO
         );
 
-        // Then
+        // Assert: Verify successful update with HTTP 200 and updated response data
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getId()).isEqualTo(existingMoodEntity.getId());
@@ -163,7 +174,7 @@ class MoodEntryIntegrationTest {
         assertThat(response.getBody().getFactors()).containsExactly("Success", "Good Food");
         assertThat(response.getBody().getNotes()).isEqualTo("Feeling amazing after update!");
 
-        // Verify changes in the database as an Entity
+        // Assert: Verify the changes were persisted to the database
         MoodEntry fetchedFromDb = moodEntryRepository.findById(existingMoodEntity.getId()).orElse(null);
         assertThat(fetchedFromDb).isNotNull();
         assertThat(fetchedFromDb.getMoodScore()).isEqualTo((short) 5);
@@ -172,54 +183,54 @@ class MoodEntryIntegrationTest {
 
     @Test
     void shouldReturnNotFoundWhenUpdatingNonExistentMoodEntry() {
-        // Given
+        // Arrange: Prepare update data for non-existent mood entry
         MoodEntryCreationDTO updateDTO = new MoodEntryCreationDTO();
         updateDTO.setMoodScore((short) 5);
         updateDTO.setDateTime(Instant.now());
         updateDTO.setNotes("Non-existent update");
 
-        // When
+        // Act: Attempt to update mood entry that doesn't exist
         ResponseEntity<MoodEntryResponseDTO> response = restTemplate.exchange(
-                "/api/mood/999", // Non-existent ID
+                "/api/mood/999", // ID that doesn't exist in database
                 HttpMethod.PUT,
                 new HttpEntity<>(updateDTO),
                 MoodEntryResponseDTO.class
         );
 
-        // Then
+        // Assert: Verify proper HTTP 404 Not Found response for missing resource
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     @Test
     void shouldDeleteMoodEntry() {
-        // Given
+        // Arrange: Create mood entry in database to be deleted
         MoodEntry existingMoodEntity = createTestMoodEntryInDb("to be deleted");
 
-        // When
+        // Act: Send DELETE request to remove the mood entry
         ResponseEntity<Void> response = restTemplate.exchange(
                 "/api/mood/" + existingMoodEntity.getId(),
                 HttpMethod.DELETE,
-                null, // No request body for DELETE
-                Void.class
+                null, // No request body required for DELETE operation
+                Void.class // No response body expected for successful deletion
         );
 
-        // Then
+        // Assert: Verify successful deletion with HTTP 204 No Content
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
-        // Verify deletion in the database
+        // Assert: Verify the mood entry was actually removed from the database
         assertThat(moodEntryRepository.findById(existingMoodEntity.getId())).isEmpty();
     }
 
     @Test
     void shouldReturnNotFoundWhenDeletingNonExistentMoodEntry() {
-        // When
+        // Act: Attempt to delete mood entry that doesn't exist
         ResponseEntity<Void> response = restTemplate.exchange(
-                "/api/mood/999", // Non-existent ID
+                "/api/mood/999", // ID that doesn't exist in database
                 HttpMethod.DELETE,
                 null,
                 Void.class
         );
 
-        // Then
+        // Assert: Verify proper HTTP 404 Not Found response for missing resource
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 }
