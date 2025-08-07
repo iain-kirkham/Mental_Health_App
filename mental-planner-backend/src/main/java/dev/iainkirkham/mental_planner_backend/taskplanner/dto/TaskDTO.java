@@ -15,11 +15,32 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TaskDTO {
+    /**
+     * The unique identifier for the task.
+     */
     private Long id;
+    /**
+     * The title or name of the task.
+     */
     private String title;
+    /**
+     * Optional detailed description of the task.
+     */
     private String description;
+    /**
+     * The date when the task is scheduled to be completed.
+     */
     private LocalDate date;
+    /**
+     * Optional start time for the task.
+     */
     private LocalTime startTime;
+    /**
+     * Indicates whether the user has completed this task.
+     */
     private boolean completed;
+    /**
+     * List of subtasks associated with this task.
+     */
     private List<SubTaskDTO> subTasks;
 }

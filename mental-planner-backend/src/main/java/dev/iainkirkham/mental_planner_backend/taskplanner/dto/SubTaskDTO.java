@@ -11,7 +11,16 @@ import lombok.AllArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SubTaskDTO {
+    /**
+     * The unique identifier for the subtask.
+     */
     private Long id;
+    /**
+     * The title or name of the subtask.
+     */
     private String title;
+    /**
+     * Indicates whether the user has completed this subtask.
+     */
     private boolean completed;
 }
