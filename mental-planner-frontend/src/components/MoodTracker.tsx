@@ -1,271 +1,201 @@
 'use client'
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Clock, Frown, Smile, Meh, Plus, X } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { useAuth } from "@clerk/nextjs";
+import PageHeader from "@/components/PageHeader";
+import { API_ENDPOINTS, authenticatedFetch } from "@/lib/api-config";
+import type { MoodEntryCreationDTO } from "@/types";
 
-// Mood configuration (unchanged)
-const MOOD_OPTIONS = [
-    { value: 1, icon: <Frown size={32} strokeWidth={2.5} />, label: "Very Bad", color: "bg-red-100 hover:bg-red-200 border-red-300" },
-    { value: 2, icon: <Frown size={32} />, label: "Bad", color: "bg-orange-100 hover:bg-orange-200 border-orange-300" },
-    { value: 3, icon: <Meh size={32} />, label: "Okay", color: "bg-yellow-100 hover:bg-yellow-200 border-yellow-300" },
-    { value: 4, icon: <Smile size={32} />, label: "Good", color: "bg-green-100 hover:bg-green-200 border-green-300" },
-    { value: 5, icon: <Smile size={32} strokeWidth={2.5} />, label: "Very Good", color: "bg-emerald-100 hover:bg-emerald-200 border-emerald-300" },
-];
 
-const COMMON_FACTORS = ["Work", "Sleep", "Exercise", "Social", "Nutrition", "Weather"];
+// New imports for smaller components
+import MoodFormMobile from "@/components/mood/MoodFormMobile";
+import MoodFormDesktop from "@/components/mood/MoodFormDesktop";
 
 export default function MoodTracker() {
-    const [date, setDate] = useState<Date | undefined>(new Date()); // Allow undefined
+    const { getToken } = useAuth();
+    const [date, setDate] = useState<Date | undefined>(new Date());
     const [time, setTime] = useState<string>(formatTime(new Date()));
     const [selectedMood, setSelectedMood] = useState<number | null>(null);
     const [notes, setNotes] = useState<string>("");
     const [factors, setFactors] = useState<string[]>([]);
     const [newFactor, setNewFactor] = useState<string>('');
     const [showFactorInput, setShowFactorInput] = useState<boolean>(false);
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+    const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+    const [errorMessage, setErrorMessage] = useState<string>('');
+
+    // Inline form validation state
+    const [formErrors, setFormErrors] = useState<{ mood?: string; date?: string; time?: string; newFactor?: string }>({});
 
     function formatDate(date: Date | undefined): string {
-        if (!date) {
+        if (!date || isNaN(date.getTime())) {
             return "Pick a date";
         }
         const options: Intl.DateTimeFormatOptions = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
         return date.toLocaleDateString('en-GB', options);
     }
 
-    // *** UPDATED formatTime FUNCTION ***
     function formatTime(date: Date | undefined): string {
-        if (!date) {
-            return "--:--"; // Or some other placeholder
+        if (!date || isNaN(date.getTime())) {
+            return "--:--";
         }
         return date.toTimeString().slice(0, 5);
     }
 
-    function getMoodColorClass() {
-        const mood = MOOD_OPTIONS.find(m => m.value === selectedMood);
-        return mood ? mood.color : "";
+    function validateForm() {
+        const errors: { mood?: string; date?: string; time?: string; newFactor?: string } = {};
+        if (selectedMood === null) errors.mood = 'How were you feeling? Tap an emoji to choose.';
+        if (!date || isNaN(date.getTime())) errors.date = 'Please pick a date using the calendar.';
+        // simple 24-hour HH:MM validation
+        if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) errors.time = 'Use 24-hour time, e.g. 14:30.';
+        if (newFactor && newFactor.trim().length > 50) errors.newFactor = 'Keep custom factors under 50 characters.';
+        return errors;
     }
 
-    // Event handlers
-    const handleAddFactor = () => {
-        if (newFactor.trim()) {
-            setFactors([...factors, newFactor.trim()]);
-            setNewFactor("");
-            setShowFactorInput(false);
-        }
-    };
+    // Keep validation updated as user changes input
+    useEffect(() => {
+        setFormErrors(validateForm());
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedMood, date, time, newFactor]);
 
+    // Event handlers
     const handleSubmit = async () => {
+        // Validation
+        const errors = validateForm();
+        if (Object.keys(errors).length > 0) {
+            setFormErrors(errors);
+            setSubmitStatus('error');
+            setErrorMessage('Some fields need attention — please correct them and try again.');
+            return;
+        }
+
+        setIsSubmitting(true);
+        setSubmitStatus('idle');
+        setErrorMessage('');
+
         try {
+            // Construct dateTime with validation
             let dateTime: string;
 
-            try {
-                // Ensure date is a valid Date object AND not an "Invalid Date"
-                if (date instanceof Date && !isNaN(date.getTime()) && typeof time === 'string' && time) {
-                    const [hours, minutes] = time.split(':').map(Number);
+            if (date && !isNaN(date.getTime()) && time) {
+                const [hours, minutes] = time.split(':').map(Number);
 
-                    // Add validation for parsed hours/minutes
-                    if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
-                        console.warn("Invalid time format. Using current date/time as fallback.");
-                        dateTime = new Date().toISOString();
-                    } else {
-                        const dateObj = new Date(date);
-                        dateObj.setHours(hours);
-                        dateObj.setMinutes(minutes);
-                        dateObj.setSeconds(0);
-                        dateObj.setMilliseconds(0);
-                        dateTime = dateObj.toISOString();
-                    }
-                } else {
-                    console.warn("Invalid date or time provided. Using current date/time as fallback.");
+                if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
                     dateTime = new Date().toISOString();
+                } else {
+                    const dateObj = new Date(date);
+                    dateObj.setHours(hours);
+                    dateObj.setMinutes(minutes);
+                    dateObj.setSeconds(0);
+                    dateObj.setMilliseconds(0);
+                    dateTime = dateObj.toISOString();
                 }
-            } catch (dateError) {
-                console.error("Error constructing dateTime:", dateError);
+            } else {
                 dateTime = new Date().toISOString();
             }
 
-            console.log("Selected Date:", date, "Selected Time:", time, "Combined DateTime:", dateTime);
-
-            const moodEntry = {
-                moodScore: selectedMood,
+            const moodEntry: MoodEntryCreationDTO = {
+                moodScore: selectedMood!,
                 dateTime: dateTime,
                 factors: factors,
-                notes: notes
+                notes: notes.trim()
             };
 
-            console.log("Saving mood entry:", moodEntry);
-
-            const response = await fetch('http://localhost:8080/api/mood', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
+            const response = await authenticatedFetch(
+                API_ENDPOINTS.mood,
+                {
+                    method: 'POST',
+                    body: JSON.stringify(moodEntry)
                 },
-                body: JSON.stringify(moodEntry)
-            });
+                getToken
+            );
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                const errorData = await response.json().catch(() => ({}));
+                const errorMsg = errorData.message || `Status: ${response.status}`;
+                setSubmitStatus('error');
+                setErrorMessage(`We couldn't save your mood entry right now. Please try again. (${errorMsg})`);
+            } else {
+                await response.json();
+
+                // Success - reset form
+                setSubmitStatus('success');
+                setSelectedMood(null);
+                setNotes("");
+                setFactors([]);
+                setDate(new Date());
+                setTime(formatTime(new Date()));
+
+                // Auto-hide success message after 3 seconds
+                setTimeout(() => {
+                    setSubmitStatus('idle');
+                }, 3000);
             }
 
-            const savedEntry = await response.json();
-            console.log("Mood entry saved successfully:", savedEntry);
-
-            // Reset form after a successful save
-            setSelectedMood(null);
-            setNotes("");
-            setFactors([]);
-            setDate(new Date()); // Reset to the current date
-            setTime(formatTime(new Date())); // Reset to the current time
-
         } catch (error) {
-            console.error("Error saving mood entry:", error);
+            const errorMsg = error instanceof Error ? error.message : 'Something went wrong while saving.';
+            setSubmitStatus('error');
+            setErrorMessage(`We couldn't save your entry right now. ${errorMsg}`);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
-    const renderMoodSelector = () => (
-        <div className="flex justify-between items-center py-2">
-            {MOOD_OPTIONS.map((mood) => (
-                <Button
-                    key={mood.value}
-                    variant="outline"
-                    className={`flex flex-col items-center p-4 min-h-16 transition-all ${
-                        selectedMood === mood.value ? `${mood.color} border-2` : ""
-                    }`}
-                    onClick={() => setSelectedMood(mood.value)}
-                >
-                    <div className={selectedMood === mood.value ? "text-black" : "text-gray-500"}>
-                        {mood.icon}
-                    </div>
-                    <span className="text-xs mt-1">{mood.label}</span>
-                </Button>
-            ))}
-        </div>
-    );
-
-    const renderDateTimePickers = () => (
-        <div className="flex gap-2">
-            <Popover>
-                <PopoverTrigger asChild>
-                    <Button variant="outline" className="flex justify-start items-center w-full">
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        <span>{formatDate(date)}</span> {/* This now handles undefined */}
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                    {/* onSelect takes a Date | undefined, which setDate can now handle */}
-                    <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
-                </PopoverContent>
-            </Popover>
-
-            <Popover>
-                <PopoverTrigger asChild>
-                    <Button variant="outline" className="flex justify-start items-center">
-                        <Clock className="mr-2 h-4 w-4" />
-                        <span>{time}</span>
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="p-4 w-auto">
-                    <div className="space-y-2">
-                        <h4 className="font-medium">Select time</h4>
-                        <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-                    </div>
-                </PopoverContent>
-            </Popover>
-        </div>
-    );
-
-    const renderFactorsSection = () => (
-        <div>
-            <div className="flex justify-between items-center mb-2">
-                <h3 className="text-sm font-medium">Factors</h3>
-                <Button variant="ghost" size="sm" onClick={() => setShowFactorInput(!showFactorInput)}>
-                    <Plus size={16} />
-                </Button>
-            </div>
-
-            {/* Common factors */}
-            <div className="flex flex-wrap gap-1 mb-2">
-                {COMMON_FACTORS.map(factor => (
-                    <Badge
-                        key={factor}
-                        variant="outline"
-                        className="cursor-pointer hover:bg-accent"
-                        onClick={() => !factors.includes(factor) && setFactors([...factors, factor])}
-                    >
-                        {factor}
-                    </Badge>
-                ))}
-            </div>
-
-            {/* Selected factors */}
-            <div className="flex flex-wrap gap-1 mb-2">
-                {factors.map(factor => (
-                    <Badge key={factor} variant="secondary" className="flex items-center gap-1">
-                        {factor}
-                        <X
-                            size={12}
-                            className="cursor-pointer"
-                            onClick={() => setFactors(factors.filter(f => f !== factor))}
-                        />
-                    </Badge>
-                ))}
-            </div>
-
-            {/* Add a custom factor */}
-            {showFactorInput && (
-                <div className="flex gap-2 mt-2">
-                    <Input
-                        placeholder="Add custom factor..."
-                        value={newFactor}
-                        onChange={(e) => setNewFactor(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleAddFactor()}
-                    />
-                    <Button size="sm" onClick={handleAddFactor}>
-                        <X size={16} className="rotate-45" />
-                    </Button>
-                </div>
-            )}
-        </div>
-    );
-
     return (
-        <Card className="w-full max-w-md mx-auto">
-            <CardHeader className={selectedMood ? `${getMoodColorClass()} rounded-t-lg transition-colors duration-300` : ""}>
-                <CardTitle>How are you feeling?</CardTitle>
-                <CardDescription>Track your mood and contributing factors</CardDescription>
-            </CardHeader>
+        <>
+            {/* Page header */}
+            <PageHeader title={<>💭 How are you feeling?</>} subtitle={<>Track your mood and contributing factors</>} size="wide" />
+            {/* Small spacer so content sits comfortably below the full-bleed header on mobile and desktop */}
+            <div className="pt-4 md:pt-6" />
 
-            <CardContent className="space-y-4">
-                {renderMoodSelector()}
-                {renderDateTimePickers()}
-                {renderFactorsSection()}
+            {/* split mobile/desktop render into small components */}
+            <MoodFormMobile
+                submitStatus={submitStatus}
+                errorMessage={errorMessage}
+                isSubmitting={isSubmitting}
+                selectedMood={selectedMood}
+                setSelectedMood={setSelectedMood}
+                formErrors={formErrors}
+                setFormErrors={setFormErrors}
+                date={date}
+                setDate={setDate}
+                time={time}
+                setTime={setTime}
+                factors={factors}
+                setFactors={setFactors}
+                newFactor={newFactor}
+                setNewFactor={setNewFactor}
+                showFactorInput={showFactorInput}
+                setShowFactorInput={setShowFactorInput}
+                notes={notes}
+                setNotes={setNotes}
+                handleSubmit={handleSubmit}
+                formatDate={formatDate}
+            />
 
-                <div>
-                    <label className="text-sm font-medium">Notes</label>
-                    <Textarea
-                        placeholder="How are you feeling? What happened today?"
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        className="mt-1"
-                    />
-                </div>
-            </CardContent>
-
-            <CardFooter>
-                <Button
-                    className="w-full"
-                    onClick={handleSubmit}
-                    disabled={selectedMood === null}
-                >
-                    Save Mood Entry
-                </Button>
-            </CardFooter>
-        </Card>
+            <MoodFormDesktop
+                submitStatus={submitStatus}
+                errorMessage={errorMessage}
+                isSubmitting={isSubmitting}
+                selectedMood={selectedMood}
+                setSelectedMood={setSelectedMood}
+                formErrors={formErrors}
+                setFormErrors={setFormErrors}
+                date={date}
+                setDate={setDate}
+                time={time}
+                setTime={setTime}
+                factors={factors}
+                setFactors={setFactors}
+                newFactor={newFactor}
+                setNewFactor={setNewFactor}
+                showFactorInput={showFactorInput}
+                setShowFactorInput={setShowFactorInput}
+                notes={notes}
+                setNotes={setNotes}
+                handleSubmit={handleSubmit}
+                formatDate={formatDate}
+            />
+        </>
     );
 }
