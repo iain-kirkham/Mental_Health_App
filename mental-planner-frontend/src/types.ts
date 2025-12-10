@@ -1,29 +1,44 @@
-export interface SubTask {
-    id: string;
-    text: string;
-    completed: boolean;
+// Types for ADHD Focus Companion
+
+// Pomodoro Session Types
+export interface PomodoroSessionCreationDTO {
+    startTime: string | null;
+    endTime: string;
+    duration: number;
+    score: number;
+    notes: string;
 }
 
-export interface Task {
-    id: string;
-    title: string;
-    description: string;
-    date: string;
-    startTime: string;
-    subTasks: SubTask[];
-    completed: boolean;
+export interface PomodoroSessionResponseDTO {
+    id: number;
+    startTime: string | null;
+    endTime: string;
+    duration: number;
+    score: number;
+    notes: string;
 }
 
-export interface WeekDay {
-    readonly name: string;
-    readonly date: Date;
-    readonly dateString: string;
+// Mood Entry Types
+export interface MoodEntryCreationDTO {
+    moodScore: number;
+    dateTime: string;
+    factors: string[];
+    notes: string;
 }
 
-export interface FormData {
-    title: string;
-    description: string;
-    date: string;
-    startTime: string;
-    subTasks: SubTask[];
+export interface MoodEntryResponseDTO {
+    id: number;
+    moodScore: number;
+    dateTime: string;
+    factors: string[];
+    notes: string;
 }
+
+// UI Types
+export interface MoodOption {
+    value: number;
+    icon: React.ReactNode;
+    label: string;
+    color: string;
+}
+

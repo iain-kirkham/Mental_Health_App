@@ -1,4 +1,4 @@
 /** @type {import('next').NextConfig} */
 module.exports = {
-    output: "standalone",
+    // output: "standalone", // Disabled on Windows to avoid symlink EPERM during build
 };
