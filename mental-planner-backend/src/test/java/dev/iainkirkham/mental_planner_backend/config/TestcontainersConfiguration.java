@@ -8,6 +8,10 @@ import org.testcontainers.utility.DockerImageName;
 
 @TestConfiguration(proxyBeanMethods = false)
 public class TestcontainersConfiguration {
+    static {
+        // ensure Testcontainers uses a compatible Docker API version
+        System.setProperty("api.version", "1.44");
+    }
     @Bean
     @ServiceConnection
     PostgreSQLContainer<?> postgresContainer() {
