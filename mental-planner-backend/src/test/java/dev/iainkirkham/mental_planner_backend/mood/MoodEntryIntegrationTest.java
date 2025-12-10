@@ -1,8 +1,8 @@
 package dev.iainkirkham.mental_planner_backend.mood;
 
+import dev.iainkirkham.mental_planner_backend.config.TestAuthenticationConfig;
+import dev.iainkirkham.mental_planner_backend.config.TestSecurityConfiguration;
 import dev.iainkirkham.mental_planner_backend.config.TestcontainersConfiguration;
-import dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryCreationDTO;
-import dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryResponseDTO;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,14 +17,21 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Integration tests for MoodEntry API endpoints.
+ * Uses Testcontainers for PostgreSQL, disables security for testing,
+ * and mocks AuthenticationContext to provide a consistent test user.
+ */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Import(TestcontainersConfiguration.class)
+@Import({TestcontainersConfiguration.class, TestAuthenticationConfig.class, TestSecurityConfiguration.class})
+@org.springframework.test.context.ActiveProfiles("test")
 class MoodEntryIntegrationTest {
 
     @Autowired
@@ -33,19 +40,35 @@ class MoodEntryIntegrationTest {
     @Autowired
     private MoodEntryRepository moodEntryRepository;
 
+    // Use a fixed instant for deterministic tests
+    private static final Instant FIXED_NOW = Instant.parse("2025-12-01T00:00:00Z");
+
     /**
      * Creates a mood entry directly in the database for test setup purposes.
+     * Sets the userId to match the test authentication context.
      *
      * @param notesSuffix A unique suffix to append to the notes field for test identification
-     * @return The persisted MoodEntry entity with generated ID
+     * @return The persisted MoodEntry entity with generated ID and userId
      */
     private MoodEntry createTestMoodEntryInDb(String notesSuffix) {
         MoodEntry moodEntry = new MoodEntry();
         moodEntry.setMoodScore((short) 3);
-        moodEntry.setDateTime(Instant.now());
+        moodEntry.setDateTime(FIXED_NOW);
         moodEntry.setFactors(Arrays.asList("Integration", "Setup"));
         moodEntry.setNotes("Integration test entry " + notesSuffix);
+        moodEntry.setUserId(TestAuthenticationConfig.TEST_USER_ID);
         return moodEntryRepository.save(moodEntry);
+    }
+
+    // Helper to create a MoodEntry at a specific Instant (reduces duplication and flakiness)
+    private void createMoodEntryAt(Instant dateTime, short score, String notes) {
+        MoodEntry moodEntry = new MoodEntry();
+        moodEntry.setMoodScore(score);
+        moodEntry.setDateTime(dateTime);
+        moodEntry.setFactors(List.of("Integration"));
+        moodEntry.setNotes(notes);
+        moodEntry.setUserId(TestAuthenticationConfig.TEST_USER_ID);
+        moodEntryRepository.save(moodEntry);
     }
 
     /**
@@ -60,34 +83,39 @@ class MoodEntryIntegrationTest {
 
     @Test
     void shouldCreateMoodEntry() {
-        // Arrange: Prepare a new mood entry creation request with sample data
-        MoodEntryCreationDTO newMoodEntryDTO = new MoodEntryCreationDTO();
-        newMoodEntryDTO.setMoodScore((short) 4);
-        newMoodEntryDTO.setDateTime(Instant.now());
-        newMoodEntryDTO.setFactors(Arrays.asList("Sunshine", "Good Sleep"));
-        newMoodEntryDTO.setNotes("Feeling good!");
+        // Arrange: Prepare a new mood entry creation request using request DTO
+        dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryRequestDTO newMoodEntry =
+            new dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryRequestDTO();
+        newMoodEntry.setMoodScore((short) 4);
+        newMoodEntry.setDateTime(FIXED_NOW);
+        newMoodEntry.setFactors(Arrays.asList("Sunshine", "Good Sleep"));
+        newMoodEntry.setNotes("Feeling good!");
 
         // Act: Send POST request to create mood entry and expect response DTO
-        ResponseEntity<MoodEntryResponseDTO> response = restTemplate.postForEntity(
+        ResponseEntity<dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryResponseDTO> response =
+            restTemplate.postForEntity(
                 "/api/mood",
-                newMoodEntryDTO, // Request body: CreationDTO
-                MoodEntryResponseDTO.class // Expected response type: ResponseDTO
+                newMoodEntry,
+                dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryResponseDTO.class
         );
 
         // Assert: Verify successful creation with HTTP 201 and correct response data
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getId()).isNotNull();
-        assertThat(response.getBody().getMoodScore()).isEqualTo((short) 4);
-        assertThat(response.getBody().getDateTime()).isNotNull();
-        assertThat(response.getBody().getFactors()).containsExactly("Sunshine", "Good Sleep");
-        assertThat(response.getBody().getNotes()).isEqualTo("Feeling good!");
+        assertThat(response.getBody()).satisfies(created -> {
+            assertThat(created).isNotNull();
+            assertThat(created.getId()).isNotNull();
+            assertThat(created.getMoodScore()).isEqualTo((short) 4);
+            assertThat(created.getDateTime()).isNotNull();
+            assertThat(created.getFactors()).containsExactly("Sunshine", "Good Sleep");
+            assertThat(created.getNotes()).isEqualTo("Feeling good!");
 
-        // Assert: Verify the mood entry was actually persisted to the database
-        Optional<MoodEntry> persistedEntity = moodEntryRepository.findById(response.getBody().getId());
-        assertThat(persistedEntity).isPresent();
-        assertThat(persistedEntity.get().getMoodScore()).isEqualTo((short) 4);
-        assertThat(persistedEntity.get().getNotes()).isEqualTo("Feeling good!");
+            // Assert: Verify the mood entry was actually persisted to the database with correct userId
+            Optional<MoodEntry> persistedEntity = moodEntryRepository.findById(created.getId());
+            assertThat(persistedEntity).isPresent();
+            assertThat(persistedEntity.get().getMoodScore()).isEqualTo((short) 4);
+            assertThat(persistedEntity.get().getNotes()).isEqualTo("Feeling good!");
+            assertThat(persistedEntity.get().getUserId()).isEqualTo(TestAuthenticationConfig.TEST_USER_ID);
+        });
     }
 
     @Test
@@ -96,23 +124,28 @@ class MoodEntryIntegrationTest {
         createTestMoodEntryInDb("1");
         createTestMoodEntryInDb("2");
 
-        // Act: Send GET request to retrieve all mood entries as response DTOs
-        ResponseEntity<List<MoodEntryResponseDTO>> response = restTemplate.exchange(
+        // Act: Send GET request to retrieve all mood entries and expect response DTOs
+        ResponseEntity<List<dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryResponseDTO>> response =
+            restTemplate.exchange(
                 "/api/mood",
                 HttpMethod.GET,
-                null, // No request body required for GET operation
-                new ParameterizedTypeReference<List<MoodEntryResponseDTO>>() {} // Use ResponseDTO
+                null,
+                new ParameterizedTypeReference<>() {}
         );
 
         // Assert: Verify successful retrieval with correct count and data structure
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody()).hasSize(2);
 
-        // Assert: Verify the returned items are properly formatted ResponseDTOs with expected content
-        assertThat(response.getBody().get(0).getId()).isNotNull();
-        assertThat(response.getBody().get(0).getMoodScore()).isEqualTo((short) 3);
-        assertThat(response.getBody().get(0).getNotes()).contains("Integration test entry");
+        // Concise chained assertions using AssertJ on the response body
+        assertThat(response.getBody())
+                .isNotNull()
+                .hasSize(2)
+                .first()
+                .satisfies(entry -> {
+                    assertThat(entry.getId()).isNotNull();
+                    assertThat(entry.getMoodScore()).isEqualTo((short) 3);
+                    assertThat(entry.getNotes()).contains("Integration test entry");
+                });
     }
 
     @Test
@@ -120,26 +153,30 @@ class MoodEntryIntegrationTest {
         // Arrange: Create a specific mood entry to retrieve by ID
         MoodEntry existingMoodEntity = createTestMoodEntryInDb("for lookup");
 
-        // Act: Send GET request for specific mood entry by ID, expecting response DTO
-        ResponseEntity<MoodEntryResponseDTO> response = restTemplate.getForEntity(
+        // Act: Send GET request for specific mood entry by ID and expect response DTO
+        ResponseEntity<dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryResponseDTO> response =
+            restTemplate.getForEntity(
                 "/api/mood/" + existingMoodEntity.getId(),
-                MoodEntryResponseDTO.class // Expected response type: ResponseDTO
+                dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryResponseDTO.class
         );
 
         // Assert: Verify successful retrieval with matching data from database entity
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getId()).isEqualTo(existingMoodEntity.getId());
-        assertThat(response.getBody().getMoodScore()).isEqualTo(existingMoodEntity.getMoodScore());
-        assertThat(response.getBody().getNotes()).isEqualTo(existingMoodEntity.getNotes());
+        assertThat(response.getBody()).satisfies(body -> {
+            assertThat(body).isNotNull();
+            assertThat(body.getId()).isEqualTo(existingMoodEntity.getId());
+            assertThat(body.getMoodScore()).isEqualTo(existingMoodEntity.getMoodScore());
+            assertThat(body.getNotes()).isEqualTo(existingMoodEntity.getNotes());
+        });
     }
 
     @Test
     void shouldReturnNotFoundForNonExistentMoodEntry() {
         // Act: Attempt to retrieve mood entry using non-existent ID
-        ResponseEntity<MoodEntryResponseDTO> response = restTemplate.getForEntity(
-                "/api/mood/999", // Non-existent ID
-                MoodEntryResponseDTO.class
+        ResponseEntity<dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryResponseDTO> response =
+            restTemplate.getForEntity(
+                "/api/mood/999",
+                dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryResponseDTO.class
         );
 
         // Assert: Verify proper HTTP 404 Not Found response for missing resource
@@ -149,52 +186,59 @@ class MoodEntryIntegrationTest {
     @Test
     void shouldUpdateMoodEntry() {
         // Arrange: Create existing mood entry in database to update
-        MoodEntry existingMoodEntity = createTestMoodEntryInDb("to be updated"); // Still create entity in DB
+        MoodEntry existingMoodEntity = createTestMoodEntryInDb("to be updated");
 
-        // Arrange: Prepare update data with modified values
-        MoodEntryCreationDTO updateDTO = new MoodEntryCreationDTO(); // Create DTO for update request
-        updateDTO.setMoodScore((short) 5);
-        updateDTO.setDateTime(Instant.now().plusSeconds(60));
-        updateDTO.setFactors(Arrays.asList("Success", "Good Food"));
-        updateDTO.setNotes("Feeling amazing after update!");
+        // Arrange: Prepare update data with modified values using request DTO
+        dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryRequestDTO updateEntry =
+            new dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryRequestDTO();
+        updateEntry.setMoodScore((short) 5);
+        updateEntry.setDateTime(FIXED_NOW.plusSeconds(60));
+        updateEntry.setFactors(Arrays.asList("Success", "Good Food"));
+        updateEntry.setNotes("Feeling amazing after update!");
 
-        // Act: Send PUT request to update existing mood entry
-        ResponseEntity<MoodEntryResponseDTO> response = restTemplate.exchange(
+        // Act: Send PUT request to update existing mood entry and expect response DTO
+        ResponseEntity<dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryResponseDTO> response =
+            restTemplate.exchange(
                 "/api/mood/" + existingMoodEntity.getId(),
                 HttpMethod.PUT,
-                new HttpEntity<>(updateDTO), // Request body: CreationDTO with updated values
-                MoodEntryResponseDTO.class // Expected response type: ResponseDTO
+                new HttpEntity<>(updateEntry),
+                dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryResponseDTO.class
         );
 
         // Assert: Verify successful update with HTTP 200 and updated response data
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getId()).isEqualTo(existingMoodEntity.getId());
-        assertThat(response.getBody().getMoodScore()).isEqualTo((short) 5);
-        assertThat(response.getBody().getFactors()).containsExactly("Success", "Good Food");
-        assertThat(response.getBody().getNotes()).isEqualTo("Feeling amazing after update!");
+        assertThat(response.getBody()).satisfies(body -> {
+            assertThat(body).isNotNull();
+            assertThat(body.getId()).isEqualTo(existingMoodEntity.getId());
+            assertThat(body.getMoodScore()).isEqualTo((short) 5);
+            assertThat(body.getFactors()).containsExactly("Success", "Good Food");
+            assertThat(body.getNotes()).isEqualTo("Feeling amazing after update!");
 
-        // Assert: Verify the changes were persisted to the database
-        MoodEntry fetchedFromDb = moodEntryRepository.findById(existingMoodEntity.getId()).orElse(null);
-        assertThat(fetchedFromDb).isNotNull();
-        assertThat(fetchedFromDb.getMoodScore()).isEqualTo((short) 5);
-        assertThat(fetchedFromDb.getNotes()).isEqualTo("Feeling amazing after update!");
+            // Assert: Verify the changes were persisted to the database
+            MoodEntry fetchedFromDb = moodEntryRepository.findById(existingMoodEntity.getId()).orElse(null);
+            assertThat(fetchedFromDb).isNotNull();
+            assertThat(fetchedFromDb.getMoodScore()).isEqualTo((short) 5);
+            assertThat(fetchedFromDb.getNotes()).isEqualTo("Feeling amazing after update!");
+        });
     }
 
     @Test
     void shouldReturnNotFoundWhenUpdatingNonExistentMoodEntry() {
-        // Arrange: Prepare update data for non-existent mood entry
-        MoodEntryCreationDTO updateDTO = new MoodEntryCreationDTO();
-        updateDTO.setMoodScore((short) 5);
-        updateDTO.setDateTime(Instant.now());
-        updateDTO.setNotes("Non-existent update");
+        // Arrange: Prepare update data for non-existent mood entry using request DTO
+        dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryRequestDTO updateEntry =
+            new dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryRequestDTO();
+        updateEntry.setMoodScore((short) 5);
+        updateEntry.setDateTime(FIXED_NOW);
+        updateEntry.setFactors(Arrays.asList("Nothing"));
+        updateEntry.setNotes("Non-existent update");
 
         // Act: Attempt to update mood entry that doesn't exist
-        ResponseEntity<MoodEntryResponseDTO> response = restTemplate.exchange(
-                "/api/mood/999", // ID that doesn't exist in database
+        ResponseEntity<dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryResponseDTO> response =
+            restTemplate.exchange(
+                "/api/mood/999",
                 HttpMethod.PUT,
-                new HttpEntity<>(updateDTO),
-                MoodEntryResponseDTO.class
+                new HttpEntity<>(updateEntry),
+                dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryResponseDTO.class
         );
 
         // Assert: Verify proper HTTP 404 Not Found response for missing resource
@@ -233,4 +277,145 @@ class MoodEntryIntegrationTest {
         // Assert: Verify proper HTTP 404 Not Found response for missing resource
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
+
+    // --- New date-range integration tests ---
+
+    @Test
+    void getMoodEntriesByDateRange_ShouldReturnOnlyEntriesInRange() {
+        // Arrange: create three entries at different times
+        Instant now = FIXED_NOW;
+        createMoodEntryAt(now.minus(10, ChronoUnit.DAYS), (short)2, "older");
+        createMoodEntryAt(now.minus(5, ChronoUnit.DAYS), (short)3, "middle");
+        createMoodEntryAt(now, (short)4, "recent");
+
+        // Act: query for entries from 7 days ago to now -> should return middle and recent
+        String start = now.minus(7, ChronoUnit.DAYS).toString();
+        String end = now.plus(1, ChronoUnit.DAYS).toString();
+
+        ResponseEntity<List<dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryResponseDTO>> response =
+            restTemplate.exchange(
+                "/api/mood?startDate=" + start + "&endDate=" + end,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<>() {}
+        );
+
+        // Assert
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody())
+                .isNotNull()
+                .hasSize(2)
+                .extracting(dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryResponseDTO::getNotes)
+                .containsExactly("recent", "middle");
+    }
+
+    @Test
+    void getMoodEntriesByDateRange_ShouldReturnNoContentWhenNoMatches() {
+        // Arrange: create an entry outside the queried window
+        Instant now = FIXED_NOW;
+        createMoodEntryAt(now.minus(30, ChronoUnit.DAYS), (short)3, "out-of-range");
+
+        // Act: query recent dates where there are no entries
+        String start = now.minus(7, ChronoUnit.DAYS).toString();
+        String end = now.toString();
+
+        ResponseEntity<List<dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryResponseDTO>> response =
+            restTemplate.exchange(
+                "/api/mood?startDate=" + start + "&endDate=" + end,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<>() {}
+        );
+
+        // Assert: controller returns 204 No Content when list empty
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+    }
+
+    @Test
+    void getMoodEntriesByDateRange_InvalidDateFormat_ReturnsBadRequest() {
+        // Act: call endpoint with invalid date format
+        ResponseEntity<String> response = restTemplate.exchange(
+                "/api/mood?startDate=not-a-date&endDate=also-not-a-date",
+                HttpMethod.GET,
+                null,
+                String.class
+        );
+
+        // Assert: Spring should return 400 Bad Request for unparsable Instants
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void getMoodEntriesByDateRange_PartialStartDate_ReturnsAllEntries() {
+        // Arrange: create three entries at different times
+        Instant now = FIXED_NOW;
+        createMoodEntryAt(now.minus(10, ChronoUnit.DAYS), (short)2, "older");
+        createMoodEntryAt(now.minus(5, ChronoUnit.DAYS), (short)3, "middle");
+        createMoodEntryAt(now, (short)4, "recent");
+
+        // Act: call with only startDate
+        String start = now.minus(7, ChronoUnit.DAYS).toString();
+        ResponseEntity<List<dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryResponseDTO>> response =
+            restTemplate.exchange(
+                "/api/mood?startDate=" + start,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<>() {}
+        );
+
+        // Assert: current controller behavior is to ignore partial ranges (returns all) - assert this
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull().hasSize(3);
+    }
+
+    @Test
+    void getMoodEntriesByDateRange_PartialEndDate_ReturnsAllEntries() {
+        // Arrange: create entries
+        Instant now = FIXED_NOW;
+        // use the time-aware helper for consistent timestamps across tests
+        createMoodEntryAt(now.minus(2, ChronoUnit.DAYS), (short)3, "A");
+        createMoodEntryAt(now.minus(1, ChronoUnit.DAYS), (short)3, "B");
+        createMoodEntryAt(now, (short)3, "C");
+
+        // Act: call with only endDate
+        String end = now.toString();
+        ResponseEntity<List<dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryResponseDTO>> response =
+            restTemplate.exchange(
+                "/api/mood?endDate=" + end,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<>() {}
+        );
+
+        // Assert: controller currently treats partial params as no-op -> returns all
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull().hasSize(3);
+    }
+
+    @Test
+    void getMoodEntriesByDateRange_BoundaryInclusivity_StartAndEndInclusive() {
+        // Arrange: set explicit entries at the start and end boundaries
+        Instant now = FIXED_NOW;
+        Instant startInstant = now.minus(7, ChronoUnit.DAYS);
+        createMoodEntryAt(startInstant, (short)1, "start");
+        createMoodEntryAt(now, (short)5, "end");
+
+        // Act: query inclusive window
+        ResponseEntity<List<dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryResponseDTO>> response =
+            restTemplate.exchange(
+                "/api/mood?startDate=" + startInstant + "&endDate=" + now,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<>() {}
+        );
+
+        // Assert: results should include both boundary entries; ordering is newest-first
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody())
+                .isNotNull()
+                .hasSizeGreaterThanOrEqualTo(2)
+                .extracting(dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryResponseDTO::getNotes)
+                .containsExactly("end", "start");
+    }
+
 }
