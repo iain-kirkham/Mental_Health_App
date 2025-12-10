@@ -1,4 +1,4 @@
-FROM openjdk:17-jdk
+FROM eclipse-temurin:21-jre
 
 # Set the working directory in the container
 WORKDIR /app
