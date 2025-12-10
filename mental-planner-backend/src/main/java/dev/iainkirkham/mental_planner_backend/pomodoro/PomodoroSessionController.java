@@ -1,6 +1,6 @@
 package dev.iainkirkham.mental_planner_backend.pomodoro;
 
-import dev.iainkirkham.mental_planner_backend.pomodoro.dto.PomodoroSessionCreationDTO;
+import dev.iainkirkham.mental_planner_backend.pomodoro.dto.PomodoroSessionRequestDTO;
 import dev.iainkirkham.mental_planner_backend.pomodoro.dto.PomodoroSessionResponseDTO;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -26,27 +26,39 @@ public class PomodoroSessionController {
     /**
      * Creates a new Pomodoro session.
      *
-     * @param creationDTO the data for the new session
+     * @param requestDTO the data for the new session
      * @return the created session with status 201 (Created)
      */
     @PostMapping
-    public ResponseEntity<PomodoroSessionResponseDTO> createPomodoroSession(@RequestBody @Valid PomodoroSessionCreationDTO creationDTO) {
-        PomodoroSessionResponseDTO responseDTO = pomodoroSessionService.createPomodoroSession(creationDTO);
-        return new ResponseEntity<>(responseDTO, HttpStatus.CREATED);
+    public ResponseEntity<PomodoroSessionResponseDTO> createPomodoroSession(@RequestBody @Valid PomodoroSessionRequestDTO requestDTO) {
+        PomodoroSessionResponseDTO savedSession = pomodoroSessionService.createPomodoroSession(requestDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedSession);
     }
 
     /**
-     * Retrieves all Pomodoro sessions.
+     * Retrieves all Pomodoro sessions, optionally filtered by date range.
      *
+     * @param startDate optional start date for filtering (ISO-8601 format)
+     * @param endDate optional end date for filtering (ISO-8601 format)
      * @return list of sessions with status 200 (OK), or 204 (No Content) if empty
      */
     @GetMapping
-    public ResponseEntity<List<PomodoroSessionResponseDTO>> getAllPomodoroSessions() {
-        List<PomodoroSessionResponseDTO> dtos = pomodoroSessionService.getAllPomodoroSessions();
-        if (dtos.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    public ResponseEntity<List<PomodoroSessionResponseDTO>> getAllPomodoroSessions(
+            @RequestParam(required = false) java.time.Instant startDate,
+            @RequestParam(required = false) java.time.Instant endDate) {
+
+        List<PomodoroSessionResponseDTO> sessions;
+
+        if (startDate != null && endDate != null) {
+            sessions = pomodoroSessionService.getPomodoroSessionsByDateRange(startDate, endDate);
+        } else {
+            sessions = pomodoroSessionService.getAllPomodoroSessions();
         }
-        return new ResponseEntity<>(dtos, HttpStatus.OK);
+
+        if (sessions.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(sessions);
     }
 
     /**
@@ -57,21 +69,21 @@ public class PomodoroSessionController {
      */
     @GetMapping("/{id}")
     public ResponseEntity<PomodoroSessionResponseDTO> getPomodoroSessionById(@PathVariable Long id) {
-        PomodoroSessionResponseDTO dto = pomodoroSessionService.getPomodoroSessionById(id);
-        return new ResponseEntity<>(dto, HttpStatus.OK);
+        PomodoroSessionResponseDTO session = pomodoroSessionService.getPomodoroSessionById(id);
+        return ResponseEntity.ok(session);
     }
 
     /**
      * Updates an existing Pomodoro session.
      *
      * @param id the ID of the session to update
-     * @param updateDTO the updated session data
+     * @param requestDTO the updated session data
      * @return the updated session with status 200 (OK)
      */
     @PutMapping("/{id}")
-    public ResponseEntity<PomodoroSessionResponseDTO> updatePomodoroSession(@PathVariable Long id, @RequestBody @Valid PomodoroSessionCreationDTO updateDTO) {
-        PomodoroSessionResponseDTO responseDTO = pomodoroSessionService.updatePomodoroSession(id, updateDTO);
-        return new ResponseEntity<>(responseDTO, HttpStatus.OK);
+    public ResponseEntity<PomodoroSessionResponseDTO> updatePomodoroSession(@PathVariable Long id, @RequestBody @Valid PomodoroSessionRequestDTO requestDTO) {
+        PomodoroSessionResponseDTO updated = pomodoroSessionService.updatePomodoroSession(id, requestDTO);
+        return ResponseEntity.ok(updated);
     }
 
     /**
@@ -83,6 +95,6 @@ public class PomodoroSessionController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletePomodoroSession(@PathVariable Long id) {
         pomodoroSessionService.deletePomodoroSession(id);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        return ResponseEntity.noContent().build();
     }
 }

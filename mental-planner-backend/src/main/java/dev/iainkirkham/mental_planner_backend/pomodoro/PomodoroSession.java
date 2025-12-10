@@ -59,4 +59,11 @@ public class PomodoroSession {
      */
     @Column(name = "notes", length = 1000)
     private String notes;
+
+    /**
+     * The Clerk user ID of the user who created this pomodoro session.
+     * This field is used to ensure data isolation between users.
+     */
+    @Column(name = "user_id")
+    private String userId;
 }
