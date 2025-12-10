@@ -67,4 +67,11 @@ public class MoodEntry {
      */
     @Column(columnDefinition = "TEXT")
     private String notes;
+
+    /**
+     * The Clerk user ID of the user who created this mood entry.
+     * This field is used to ensure data isolation between users.
+     */
+    @Column(name = "user_id")
+    private String userId;
 }
