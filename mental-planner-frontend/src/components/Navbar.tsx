@@ -105,7 +105,7 @@ export function Navbar() {
                                 aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
                                 aria-expanded={mobileOpen}
                                 onClick={() => setMobileOpen(!mobileOpen)}
-                                className="inline-flex items-center justify-center p-2 rounded-md text-slate-700 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                                className="inline-flex items-center justify-center p-2 rounded-md text-slate-700 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-hidden focus:ring-2 focus:ring-slate-300"
                             >
                                 {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
                             </button>
