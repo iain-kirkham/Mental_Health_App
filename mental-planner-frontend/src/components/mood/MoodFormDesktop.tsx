@@ -51,7 +51,7 @@ export default function MoodFormDesktop({ submitStatus, errorMessage, isSubmitti
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription className="font-medium">{errorMessage || "We couldn't save your mood entry — please try again."}</AlertDescription>
               </div>
-              <div className="flex-shrink-0">
+              <div className="shrink-0">
                 <Button size="sm" variant="outline" onClick={handleSubmit} disabled={isSubmitting} aria-label="Retry save">Try again</Button>
               </div>
             </div>

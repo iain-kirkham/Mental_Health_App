@@ -27,11 +27,11 @@ export function SessionSummaryModal({
     };
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-md w-full shadow-2xl border border-gray-200 dark:border-gray-700 animate-in zoom-in duration-300">
                 <div className="text-center mb-6">
                     <div className="text-4xl mb-2">✨</div>
-                    <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                    <h2 className="text-2xl font-bold bg-linear-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
                         Session Summary
                     </h2>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
@@ -50,7 +50,7 @@ export function SessionSummaryModal({
                             max={5}
                             value={score}
                             onChange={onScoreChange}
-                            className="text-center text-2xl font-bold h-14 shadow-sm border-2"
+                            className="text-center text-2xl font-bold h-14 shadow-xs border-2"
                             disabled={isSubmitting}
                             aria-label="Session score"
                         />
@@ -69,7 +69,7 @@ export function SessionSummaryModal({
                             onChange={onNotesChange}
                             rows={4}
                             placeholder="What helped you focus? Any distractions?"
-                            className="w-full rounded-lg border-2 border-gray-300 dark:border-gray-600 p-3 dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all resize-none shadow-sm"
+                            className="w-full rounded-lg border-2 border-gray-300 dark:border-gray-600 p-3 dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all resize-none shadow-xs"
                             disabled={isSubmitting}
                             aria-label="Session notes"
                         />
