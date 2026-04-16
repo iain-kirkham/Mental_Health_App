@@ -1,8 +1,12 @@
-# Mental Health Planner
+# ADHD Focus Companion
 
 > [!WARNING]
 > **🚧 Work in Progress 🚧**
 > This project is currently under active development. Expect frequent changes, breaking updates, and incomplete features. It is not yet ready for production use.
+
+## About
+
+A mental health toolkit designed with ADHD in mind. Instead of rigid time-blocking and planning, this app focuses on tools that work *with* ADHD brains: hyperfocus management through Pomodoro sessions and mood/pattern tracking to build self-awareness.
 
 ## Getting Started
 
@@ -68,23 +72,107 @@ The application will now be running, and you can interact with the Pomodoro time
 
 ---
 
-## Features (Current & Planned)
+## Deploying to Heroku
 
-- **Pomodoro Timer & Session Tracking:** Save session duration and a 1-5 rating.
-- **Mood Tracker** Rate days from very bad to very good, with factors affecting mood and notes.
-- **Task Manager** Plan your days with a task manager including subtasks
-- **Next.js Frontend:** Responsive UI for interactive planning.
-- **Spring Boot Backend:** RESTful API for data persistence in PostgreSQL.
-- **Dockerized:** Easy environment setup and deployment (and Test Containers!).
-- **Planned:** User authentication, personalised dashboards, more mental health planning tools.
+This repository is a monorepo, so deploy **two separate Heroku apps**:
+
+- `mental-planner-backend` (Spring Boot API)
+- `mental-planner-frontend` (Next.js web app)
+
+### 1) Prerequisites
+
+- Install the [Heroku CLI](https://devcenter.heroku.com/articles/heroku-cli)
+- Log in: `heroku login`
+
+### 2) Create backend app
+
+```bash
+heroku create your-backend-app-name --buildpack heroku/java
+heroku addons:create heroku-postgresql:mini -a your-backend-app-name
+```
+
+Set backend config vars:
+
+```bash
+heroku config:set CORS_ALLOWED_ORIGINS=https://your-frontend-app-name.herokuapp.com -a your-backend-app-name
+heroku config:set CLERK_ISSUER_URL=your_clerk_issuer_url -a your-backend-app-name
+heroku config:set CLERK_JWKS_URI=your_clerk_jwks_uri -a your-backend-app-name
+```
+
+> The backend is configured to use Heroku's `PORT` and Postgres `JDBC_DATABASE_*` variables automatically.
+
+### 3) Create frontend app
+
+```bash
+heroku create your-frontend-app-name --buildpack heroku/nodejs
+```
+
+Set frontend config vars:
+
+```bash
+heroku config:set NEXT_PUBLIC_API_URL=https://your-backend-app-name.herokuapp.com -a your-frontend-app-name
+heroku config:set NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key -a your-frontend-app-name
+heroku config:set CLERK_SECRET_KEY=your_clerk_secret_key -a your-frontend-app-name
+```
+
+### 4) Add Heroku remotes
+
+```bash
+heroku git:remote -a your-backend-app-name --remote heroku-backend
+heroku git:remote -a your-frontend-app-name --remote heroku-frontend
+```
+
+### 5) Deploy from monorepo subfolders
+
+Deploy backend:
+
+```bash
+git subtree push --prefix mental-planner-backend heroku-backend main
+```
+
+Deploy frontend:
+
+```bash
+git subtree push --prefix mental-planner-frontend heroku-frontend main
+```
+
+### 6) Open apps
+
+```bash
+heroku open -a your-frontend-app-name
+heroku open -a your-backend-app-name
+```
 
 ---
 
-## ️ Technologies
+## Features
 
-* **Frontend:** Next.js, JavaScript/TypeScript, (Your UI library if any, e.g., React)
-* **Backend:** Spring Boot, Java 17+, Spring Data JPA, Lombok, PostgreSQL
+### Current Features
+- **🍅 Pomodoro Timer & Session Tracking:** Manage hyperfocus sessions with customizable timers. Rate each session (1-5) to track productivity patterns.
+- **📊 Mood Tracker:** Daily mood logging with customizable factors and notes. Identify patterns and triggers over time.
+- **💼 Job Search Tracker:** Keep a simple table of applications with company name, role title, and current status.
+- **🎨 Clean, Responsive UI:** Built with Next.js and shadcn/ui components for a distraction-free experience.
+- **🔒 User Authentication:** Powered by Clerk for secure, personalized tracking.
+- **🐳 Dockerized:** Easy environment setup with Docker Compose and PostgreSQL.
+
+### Planned ADHD-Friendly Features
+- **Flexible To-Do Lists:** Non-time-blocked task capture with priority tagging (no rigid schedules!)
+- **Dopamine Tracking:** Log activities and their impact on your energy/motivation
+- **Hyperfocus Activity Logger:** Track what activities trigger flow states
+- **Body Doubling Support:** Virtual co-working session timer
+- **Habit Streaks (Forgiving):** Track habits with ADHD-friendly grace periods
+- **Pattern Recognition Dashboard:** Visualize connections between mood, activities, and productivity
+
+---
+
+## 🛠️ Technologies
+
+* **Frontend:** Next.js 14, TypeScript, React, shadcn/ui, Tailwind CSS
+* **Backend:** Spring Boot, Java 17+, Spring Data JPA, Lombok
+* **Database:** PostgreSQL with Flyway migrations
+* **Authentication:** Clerk
 * **Containerization:** Docker, Docker Compose
+* **Testing:** JUnit, Testcontainers
 
 ---
 

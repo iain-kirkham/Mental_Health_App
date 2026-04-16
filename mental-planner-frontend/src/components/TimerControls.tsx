@@ -80,7 +80,7 @@ export function TimerControls({
                     value={inputTime}
                     onChange={onInputChange}
                     disabled={disabledInput}
-                    className="w-full text-lg font-semibold text-center shadow-xs"
+                    className="w-full text-lg font-semibold text-center shadow-sm"
                     aria-label="Timer duration in minutes"
                 />
                 {disabledInput && (
