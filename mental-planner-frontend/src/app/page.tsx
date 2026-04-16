@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Timer, LineChart, Brain } from 'lucide-react';
+import { Timer, LineChart, Brain, BriefcaseBusiness } from 'lucide-react';
 
 export default function Home() {
   return (
@@ -17,7 +17,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2 mt-12">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mt-12">
             <Link href="/pomodoro">
               <Card className="hover:border-primary transition-colors cursor-pointer h-full">
                 <CardHeader>
@@ -48,6 +48,23 @@ export default function Home() {
                 </CardHeader>
                 <CardContent>
                   <Button variant="outline" className="w-full">Track Mood</Button>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link href="/job-search">
+              <Card className="hover:border-primary transition-colors cursor-pointer h-full">
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <BriefcaseBusiness className="h-6 w-6 text-primary" />
+                    <CardTitle>Job Search Tracker</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Keep a quick table of applications with company names, role titles, and status updates.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button variant="outline" className="w-full">Open Tracker</Button>
                 </CardContent>
               </Card>
             </Link>

@@ -1,12 +1,21 @@
+FROM eclipse-temurin:21-jdk AS builder
+
+WORKDIR /workspace
+
+# Copy Gradle wrapper and build config first to maximize layer caching.
+COPY gradlew gradlew.bat settings.gradle.kts build.gradle.kts ./
+COPY gradle ./gradle
+RUN chmod +x ./gradlew
+
+# Copy source and build a fresh boot JAR from current code.
+COPY src ./src
+RUN ./gradlew --no-daemon clean bootJar
+
 FROM eclipse-temurin:21-jre
 
-# Set the working directory in the container
 WORKDIR /app
+COPY --from=builder /workspace/build/libs/*.jar app.jar
 
-# Copy the application JAR file built by Gradle
-COPY build/libs/*.jar app.jar
-
-# Expose the port Spring Boot runs on
 EXPOSE 8080
 
 CMD ["java", "-jar", "app.jar"]
