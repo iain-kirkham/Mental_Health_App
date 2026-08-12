@@ -1,7 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
+import { History } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import StatusAlerts from "@/components/StatusAlerts";
 import { TimerDisplay } from "./TimerDisplay";
 import { TimerControls } from "./TimerControls";
@@ -78,6 +81,15 @@ export default function Timer() {
         <>
             <PageHeader title={<>🍅 Pomodoro Timer</>} subtitle={<>Focus and track your productivity sessions</>} size="wide" />
             <div className="pt-4 md:pt-6" />
+
+            <PageInset size="wide" className="flex justify-end pb-2">
+                <Link href="/pomodoro/history">
+                    <Button variant="outline" size="sm">
+                        <History className="mr-2 h-4 w-4" />
+                        View session history
+                    </Button>
+                </Link>
+            </PageInset>
 
             {/* Mobile layout - cardless */}
             <div className="md:hidden w-full">
