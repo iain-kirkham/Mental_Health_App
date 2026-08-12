@@ -3,7 +3,7 @@ import type { MoodOption as MoodOptionType } from "@/types";
 import MoodOption from "./MoodOption";
 import { Frown, Smile, Meh } from "lucide-react";
 
-const MOOD_OPTIONS: MoodOptionType[] = [
+export const MOOD_OPTIONS: MoodOptionType[] = [
 	{
 		value: 1,
 		icon: <Frown size={32} strokeWidth={2.5} />,
