@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import usePomodoroSession from "@/hooks/usePomodoroSession";
 import type { PomodoroSessionCreationDTO } from "@/types";
 
@@ -6,8 +6,16 @@ export default function useSessionManager(getToken: () => Promise<string | null>
   const [showSessionForm, setShowSessionForm] = useState(false);
   const [score, setScore] = useState<number>(3);
   const [notes, setNotes] = useState<string>("");
+  const statusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { isSubmitting, submitStatus, errorMessage, saveSession, setSubmitStatus } = usePomodoroSession(getToken);
+
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current);
+    };
+  }, []);
 
   const handleSaveSession = async (params: { startTime: Date | null; totalTime: number; timeLeft: number }) => {
     const { startTime, totalTime, timeLeft } = params;
@@ -28,7 +36,8 @@ export default function useSessionManager(getToken: () => Promise<string | null>
       setNotes("");
 
       // Auto-clear status
-      setTimeout(() => setSubmitStatus('idle'), 3000);
+      if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current);
+      statusTimeoutRef.current = setTimeout(() => setSubmitStatus('idle'), 3000);
     }
 
     return result;

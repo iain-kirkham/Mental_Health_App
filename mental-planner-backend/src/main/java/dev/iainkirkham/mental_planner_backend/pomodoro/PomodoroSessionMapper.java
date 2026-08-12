@@ -5,7 +5,6 @@ import dev.iainkirkham.mental_planner_backend.pomodoro.dto.PomodoroSessionRespon
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Mapper class for converting between PomodoroSession entities and DTOs.
@@ -72,7 +71,7 @@ public class PomodoroSessionMapper {
 
         return entities.stream()
                 .map(this::toResponseDTO)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     /**

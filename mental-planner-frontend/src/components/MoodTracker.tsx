@@ -1,15 +1,31 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useAuth } from "@clerk/nextjs";
 import PageHeader from "@/components/PageHeader";
 import { API_ENDPOINTS, authenticatedFetch } from "@/lib/api-config";
 import type { MoodEntryCreationDTO } from "@/types";
-
-
-// New imports for smaller components
+import type { FormErrors } from "@/components/mood/types";
 import MoodFormMobile from "@/components/mood/MoodFormMobile";
 import MoodFormDesktop from "@/components/mood/MoodFormDesktop";
+
+/** Maximum length for a custom factor name. */
+const MAX_FACTOR_LENGTH = 50;
+
+function formatDate(date: Date | undefined): string {
+    if (!date || isNaN(date.getTime())) {
+        return "Pick a date";
+    }
+    const options: Intl.DateTimeFormatOptions = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+    return date.toLocaleDateString('en-GB', options);
+}
+
+function formatTime(date: Date | undefined): string {
+    if (!date || isNaN(date.getTime())) {
+        return "--:--";
+    }
+    return date.toTimeString().slice(0, 5);
+}
 
 export default function MoodTracker() {
     const { getToken } = useAuth();
@@ -24,46 +40,33 @@ export default function MoodTracker() {
     const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [errorMessage, setErrorMessage] = useState<string>('');
 
-    // Inline form validation state
-    const [formErrors, setFormErrors] = useState<{ mood?: string; date?: string; time?: string; newFactor?: string }>({});
+    // Ref to clear the auto-hide timeout on unmount
+    const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    function formatDate(date: Date | undefined): string {
-        if (!date || isNaN(date.getTime())) {
-            return "Pick a date";
-        }
-        const options: Intl.DateTimeFormatOptions = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
-        return date.toLocaleDateString('en-GB', options);
-    }
+    // Clean up timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
+        };
+    }, []);
 
-    function formatTime(date: Date | undefined): string {
-        if (!date || isNaN(date.getTime())) {
-            return "--:--";
-        }
-        return date.toTimeString().slice(0, 5);
-    }
-
-    function validateForm() {
-        const errors: { mood?: string; date?: string; time?: string; newFactor?: string } = {};
+    const validateForm = useCallback((): FormErrors => {
+        const errors: FormErrors = {};
         if (selectedMood === null) errors.mood = 'How were you feeling? Tap an emoji to choose.';
         if (!date || isNaN(date.getTime())) errors.date = 'Please pick a date using the calendar.';
-        // simple 24-hour HH:MM validation
         if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) errors.time = 'Use 24-hour time, e.g. 14:30.';
-        if (newFactor && newFactor.trim().length > 50) errors.newFactor = 'Keep custom factors under 50 characters.';
+        if (newFactor && newFactor.trim().length > MAX_FACTOR_LENGTH) errors.newFactor = `Keep custom factors under ${MAX_FACTOR_LENGTH} characters.`;
         return errors;
-    }
-
-    // Keep validation updated as user changes input
-    useEffect(() => {
-        setFormErrors(validateForm());
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedMood, date, time, newFactor]);
+
+    // Kept updated as user changes input
+    const formErrors = useMemo(() => validateForm(), [validateForm]);
 
     // Event handlers
     const handleSubmit = async () => {
         // Validation
         const errors = validateForm();
         if (Object.keys(errors).length > 0) {
-            setFormErrors(errors);
             setSubmitStatus('error');
             setErrorMessage('Some fields need attention — please correct them and try again.');
             return;
@@ -127,7 +130,8 @@ export default function MoodTracker() {
                 setTime(formatTime(new Date()));
 
                 // Auto-hide success message after 3 seconds
-                setTimeout(() => {
+                if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
+                successTimeoutRef.current = setTimeout(() => {
                     setSubmitStatus('idle');
                 }, 3000);
             }
@@ -156,7 +160,6 @@ export default function MoodTracker() {
                 selectedMood={selectedMood}
                 setSelectedMood={setSelectedMood}
                 formErrors={formErrors}
-                setFormErrors={setFormErrors}
                 date={date}
                 setDate={setDate}
                 time={time}
@@ -180,7 +183,6 @@ export default function MoodTracker() {
                 selectedMood={selectedMood}
                 setSelectedMood={setSelectedMood}
                 formErrors={formErrors}
-                setFormErrors={setFormErrors}
                 date={date}
                 setDate={setDate}
                 time={time}
