@@ -26,6 +26,8 @@ export default function Timer() {
         setScore,
         notes,
         setNotes,
+        energyRating,
+        setEnergyRating,
         isSubmitting,
         submitStatus,
         errorMessage,
@@ -167,8 +169,10 @@ export default function Timer() {
                   <SessionSummaryModal
                       score={score}
                       notes={notes}
+                      energyRating={energyRating}
                       onScoreChange={(e) => setScore(Number(e.target.value))}
                       onNotesChange={(e) => setNotes(e.target.value)}
+                      onEnergyRatingChange={setEnergyRating}
                       onCancel={() => setShowSessionForm(false)}
                       onSave={handleSaveSession}
                       isSubmitting={isSubmitting}

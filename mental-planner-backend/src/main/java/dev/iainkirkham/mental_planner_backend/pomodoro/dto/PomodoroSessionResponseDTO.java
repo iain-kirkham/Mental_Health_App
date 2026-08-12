@@ -1,5 +1,6 @@
 package dev.iainkirkham.mental_planner_backend.pomodoro.dto;
 
+import dev.iainkirkham.mental_planner_backend.pomodoro.EnergyRating;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -21,5 +22,6 @@ public class PomodoroSessionResponseDTO {
     private int duration;
     private Short score;
     private String notes;
+    private EnergyRating energyRating;
 }
 
