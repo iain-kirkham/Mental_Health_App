@@ -27,13 +27,13 @@ Ensure you have the following installed:
 1.  **Clone the repository:**
     ```bash
     git clone [your-repo-url]
-    cd mental-health-planner
+    cd "Mental Health App"
     ```
 2.  **Create `.env` files**:
     You'll need two `.env` files for the application to run correctly:
 
     * **Backend and PostgreSQL (`.env`)**:
-      This file should be in the root `mental-health-planner` directory, alongside your `docker-compose.yml`. It will contain environment variables for both the Spring Boot backend and the PostgreSQL database.
+      Copy `.env.example` to `.env` in the repo root, alongside `docker-compose.yml`. It contains the PostgreSQL credentials shared by the database and the Spring Boot backend:
         ```
         POSTGRES_USER=developer
         POSTGRES_PASSWORD=password
@@ -46,13 +46,13 @@ Ensure you have the following installed:
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
         CLERK_SECRET_KEY=your_clerk_secret_key
         ```
-3.  **Start the Database (PostgreSQL) with Docker Compose:**
-    This command will build the container for the database and start it up on port 5432.
+3.  **Start PostgreSQL with Docker Compose:**
+    This starts just the database on port 5432, for use with the backend and frontend running directly on your machine.
     ```bash
-    docker-compose up --build
+    docker compose -f docker-compose-postgres.yml up -d
     ```
 4.  **Run the Backend (Spring Boot):**
-    Navigate into your backend project directory `cd mental-planner-backend`
+    Navigate into the backend project directory `cd mental-planner-backend`
     ```bash
     ./gradlew bootRun # On Linux/macOS
     gradlew bootRun # On Windows
@@ -66,9 +66,29 @@ Ensure you have the following installed:
 
 6.  **Access the application:**
     * **Frontend:** `http://localhost:3000`
-    * **Backend API:** `http://localhost:8080/api`
+    * **Backend API:** `http://localhost:8080` (endpoints under `/api/**`, e.g. `/api/pomodoro`, `/api/mood`, `/api/job-search`)
 
-The application will now be running, and you can interact with the Pomodoro timer and save sessions.
+The application will now be running, and you can interact with the Pomodoro timer, mood tracker, and job search tracker.
+
+> [!NOTE]
+> `docker-compose.yml` in the repo root builds and runs the **full stack** (database, backend, and frontend) in containers instead — useful for a production-like smoke test: `docker compose up --build`.
+
+---
+
+## Testing
+
+**Frontend** (from `mental-planner-frontend`):
+```bash
+pnpm test:unit  # Vitest unit tests
+pnpm test:e2e   # Playwright end-to-end tests
+```
+
+**Backend** (from `mental-planner-backend`):
+```bash
+./gradlew test # On Linux/macOS
+gradlew test # On Windows
+```
+Backend integration tests use Testcontainers, so Docker must be running.
 
 ---
 
@@ -167,12 +187,12 @@ heroku open -a your-backend-app-name
 
 ## 🛠️ Technologies
 
-* **Frontend:** Next.js 14, TypeScript, React, shadcn/ui, Tailwind CSS
-* **Backend:** Spring Boot, Java 17+, Spring Data JPA, Lombok
+* **Frontend:** Next.js 16, TypeScript, React 19, shadcn/ui (Radix primitives), Tailwind CSS 4
+* **Backend:** Spring Boot 4.1, Java 21, Spring Data JPA, Spring Security (OAuth2 resource server), Lombok
 * **Database:** PostgreSQL with Flyway migrations
-* **Authentication:** Clerk
+* **Authentication:** Clerk (JWT validated by the backend as an OAuth2 resource server)
 * **Containerization:** Docker, Docker Compose
-* **Testing:** JUnit, Testcontainers
+* **Testing:** Vitest and Playwright (frontend); JUnit and Testcontainers (backend)
 
 ---
 
@@ -180,10 +200,9 @@ heroku open -a your-backend-app-name
 
 To stop the services:
 
-1. Frontend: Go to the terminal running pnpm run dev and press Ctrl+C.
-2. Backend: Go to the terminal running gradlew bootRun and press Ctrl+C.
-3. Database: Go to the terminal where you ran docker-compose up -d postgres and run:
-
-```bash
-docker-compose down # This will stop all services defined in docker-compose
-```
+1. Frontend: Go to the terminal running `pnpm run dev` and press Ctrl+C.
+2. Backend: Go to the terminal running `gradlew bootRun` and press Ctrl+C.
+3. Database:
+    ```bash
+    docker compose -f docker-compose-postgres.yml down
+    ```
