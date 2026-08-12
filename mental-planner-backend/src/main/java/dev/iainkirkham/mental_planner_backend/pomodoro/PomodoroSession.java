@@ -27,7 +27,7 @@ public class PomodoroSession {
     private Long id;
 
     /**
-     * The date and time of when the mood entry was recorded.
+     * The date and time of when the pomodoro session started.
      * The time is provided in UTC.
      */
     @NotNull
@@ -35,7 +35,7 @@ public class PomodoroSession {
     private Instant startTime;
 
     /**
-     * The date and time of when the mood entry was recorded.
+     * The date and time of when the pomodoro session ended.
      * The time is provided in UTC.
      */
     @Column(name = "end_time")
@@ -54,7 +54,7 @@ public class PomodoroSession {
     private Short score;
 
     /**
-     * Optional notes about the mood entry.
+     * Optional notes about the pomodoro session.
      * Stored as text in the database to allow user to record long descriptions if required.
      */
     @Column(name = "notes", length = 1000)

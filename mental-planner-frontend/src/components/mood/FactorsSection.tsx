@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,24 +15,25 @@ type Props = {
   setShowFactorInput: (b: boolean) => void;
   isSubmitting: boolean;
   formErrors: { newFactor?: string };
-  setFormErrors: (fn: (prev: any) => any) => void;
 };
 
-export default function FactorsSection({ factors, setFactors, newFactor, setNewFactor, showFactorInput, setShowFactorInput, isSubmitting, formErrors, setFormErrors }: Props) {
+export default function FactorsSection({ factors, setFactors, newFactor, setNewFactor, showFactorInput, setShowFactorInput, isSubmitting, formErrors }: Props) {
+  const [addError, setAddError] = useState<string>();
+
   const handleAdd = () => {
     const trimmed = newFactor.trim();
     if (!trimmed) {
-      setFormErrors(prev => ({ ...prev, newFactor: 'Type a factor (e.g. Sleep) and press Add.' }));
+      setAddError('Type a factor (e.g. Sleep) and press Add.');
       return;
     }
     if (factors.includes(trimmed)) {
-      setFormErrors(prev => ({ ...prev, newFactor: 'That factor is already added.' }));
+      setAddError('That factor is already added.');
       return;
     }
     setFactors([...factors, trimmed]);
     setNewFactor("");
     setShowFactorInput(false);
-    setFormErrors(prev => ({ ...prev, newFactor: undefined }));
+    setAddError(undefined);
   };
 
   return (
@@ -65,13 +66,13 @@ export default function FactorsSection({ factors, setFactors, newFactor, setNewF
 
       {showFactorInput && (
         <div className="flex gap-2 mt-3 animate-in slide-in-from-top duration-300">
-          <Input placeholder="Add custom factor..." value={newFactor} onChange={(e) => { setNewFactor(e.target.value); setFormErrors(prev => ({ ...prev, newFactor: undefined })); }} onKeyDown={(e) => e.key === 'Enter' && handleAdd()} disabled={isSubmitting} aria-label="Custom factor name" className="border-2 focus:border-slate-400" />
+          <Input placeholder="Add custom factor..." value={newFactor} onChange={(e) => { setNewFactor(e.target.value); setAddError(undefined); }} onKeyDown={(e) => e.key === 'Enter' && handleAdd()} disabled={isSubmitting} aria-label="Custom factor name" className="border-2 focus:border-slate-400" />
           <Button size="sm" onClick={handleAdd} disabled={isSubmitting || !newFactor.trim()} aria-label="Add factor" className="bg-slate-700 text-white hover:opacity-90">
             <X size={16} className="rotate-45" />
           </Button>
         </div>
       )}
-      {formErrors.newFactor && <p className="text-sm text-red-600 mt-2">{formErrors.newFactor}</p>}
+      {(addError || formErrors.newFactor) && <p className="text-sm text-red-600 mt-2">{addError || formErrors.newFactor}</p>}
     </div>
   );
 }

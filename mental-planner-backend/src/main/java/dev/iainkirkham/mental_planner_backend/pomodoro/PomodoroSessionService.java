@@ -5,6 +5,7 @@ import dev.iainkirkham.mental_planner_backend.exception.ResourceNotFoundExceptio
 import dev.iainkirkham.mental_planner_backend.pomodoro.dto.PomodoroSessionRequestDTO;
 import dev.iainkirkham.mental_planner_backend.pomodoro.dto.PomodoroSessionResponseDTO;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -15,6 +16,7 @@ import java.util.List;
  * All operations are filtered by the authenticated user to ensure data isolation.
  */
 @Service
+@Transactional(readOnly = true)
 public class PomodoroSessionService {
 
     private final PomodoroSessionRepository pomodoroSessionRepository;
@@ -35,6 +37,7 @@ public class PomodoroSessionService {
      * @param requestDTO The session DTO to create.
      * @return The saved session as a response DTO.
      */
+    @Transactional
     public PomodoroSessionResponseDTO createPomodoroSession(PomodoroSessionRequestDTO requestDTO) {
         PomodoroSession pomodoroSession = pomodoroSessionMapper.toEntity(requestDTO);
         pomodoroSession.setId(null); // Ensure ID is null for new entries
@@ -92,6 +95,7 @@ public class PomodoroSessionService {
      * @return The updated session as a response DTO.
      * @throws ResourceNotFoundException if the session doesn't exist or doesn't belong to the user.
      */
+    @Transactional
     public PomodoroSessionResponseDTO updatePomodoroSession(Long id, PomodoroSessionRequestDTO requestDTO) {
         String userId = authenticationContext.getCurrentUserId();
         PomodoroSession existingPomodoroSession = pomodoroSessionRepository.findByIdAndUserId(id, userId)
@@ -109,6 +113,7 @@ public class PomodoroSessionService {
      * @param id The ID of the session to delete.
      * @throws ResourceNotFoundException if the session doesn't exist or doesn't belong to the user.
      */
+    @Transactional
     public void deletePomodoroSession(Long id) {
         String userId = authenticationContext.getCurrentUserId();
         PomodoroSession session = pomodoroSessionRepository.findByIdAndUserId(id, userId)

@@ -15,7 +15,6 @@ type Props = {
   selectedMood: number | null;
   setSelectedMood: (v: number | null) => void;
   formErrors: FormErrors;
-  setFormErrors: (fn: (prev: any) => any) => void;
   date: Date | undefined;
   setDate: (d: Date | undefined) => void;
   time: string;
@@ -32,7 +31,7 @@ type Props = {
   formatDate: (d: Date | undefined) => string;
 };
 
-export default function MoodFormMobile({ submitStatus, errorMessage, isSubmitting, selectedMood, setSelectedMood, formErrors, setFormErrors, date, setDate, time, setTime, factors, setFactors, newFactor, setNewFactor, showFactorInput, setShowFactorInput, notes, setNotes, handleSubmit, formatDate, }: Props) {
+export default function MoodFormMobile({ submitStatus, errorMessage, isSubmitting, selectedMood, setSelectedMood, formErrors, date, setDate, time, setTime, factors, setFactors, newFactor, setNewFactor, showFactorInput, setShowFactorInput, notes, setNotes, handleSubmit, formatDate, }: Props) {
   return (
     <div className="md:hidden">
       <div className="w-full">
@@ -73,7 +72,7 @@ export default function MoodFormMobile({ submitStatus, errorMessage, isSubmittin
             </div>
           )}
 
-          <FactorsSection factors={factors} setFactors={setFactors} newFactor={newFactor} setNewFactor={setNewFactor} showFactorInput={showFactorInput} setShowFactorInput={setShowFactorInput} isSubmitting={isSubmitting} formErrors={{ newFactor: formErrors.newFactor }} setFormErrors={setFormErrors} />
+          <FactorsSection factors={factors} setFactors={setFactors} newFactor={newFactor} setNewFactor={setNewFactor} showFactorInput={showFactorInput} setShowFactorInput={setShowFactorInput} isSubmitting={isSubmitting} formErrors={{ newFactor: formErrors.newFactor }} />
 
           <div>
             <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2 block">📝 Notes</label>

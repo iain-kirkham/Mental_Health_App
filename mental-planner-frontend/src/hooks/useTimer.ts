@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 type UseTimerResult = {
   timeLeft: number;
@@ -16,37 +16,42 @@ type UseTimerResult = {
 export default function useTimer(initialMinutes = 5, onExpire?: () => void): UseTimerResult {
   const initialSeconds = Math.max(1, Math.floor(initialMinutes)) * 60;
   const [timeLeft, setTimeLeft] = useState<number>(initialSeconds);
-  const [isRunning, setIsRunning] = useState<boolean>(false);
+  const [internalRunning, setInternalRunning] = useState<boolean>(false);
   const [inputTime, setInputTimeState] = useState<number>(initialMinutes);
   const [totalTime, setTotalTime] = useState<number>(initialSeconds);
-  const sessionStartTimeRef = useRef<Date | null>(null);
+  const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
+
+  // Running is only meaningful while time remains; once it hits zero the timer has expired.
+  const isRunning = internalRunning && timeLeft > 0;
 
   // Keep totalTime in sync if initialMinutes changes (rare)
-  useEffect(() => {
+  const [prevInitialMinutes, setPrevInitialMinutes] = useState(initialMinutes);
+  if (initialMinutes !== prevInitialMinutes) {
     const secs = Math.max(1, Math.floor(initialMinutes)) * 60;
+    setPrevInitialMinutes(initialMinutes);
     setTimeLeft(secs);
     setTotalTime(secs);
     setInputTimeState(initialMinutes);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialMinutes]);
+  }
 
   useEffect(() => {
-    let interval: number | undefined;
-
-    if (isRunning && timeLeft > 0) {
-      interval = window.setInterval(() => {
-        setTimeLeft((prev) => prev - 1);
-      }, 1000);
-    } else if (isRunning && timeLeft === 0) {
-      // stop and signal expiry
-      setIsRunning(false);
-      if (typeof onExpire === "function") onExpire();
+    if (!isRunning) {
+      return;
     }
 
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isRunning, timeLeft, onExpire]);
+    const interval = window.setInterval(() => {
+      setTimeLeft((prev) => Math.max(0, prev - 1));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isRunning]);
+
+  // Signal expiry as a side effect once the countdown actually reaches zero
+  useEffect(() => {
+    if (internalRunning && timeLeft === 0 && typeof onExpire === "function") {
+      onExpire();
+    }
+  }, [internalRunning, timeLeft, onExpire]);
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -62,21 +67,17 @@ export default function useTimer(initialMinutes = 5, onExpire?: () => void): Use
   };
 
   const startPause = () => {
-    if (!isRunning) {
-      sessionStartTimeRef.current = new Date();
+    if (!internalRunning) {
+      setSessionStartTime(new Date());
     }
-    setIsRunning((s) => !s);
+    setInternalRunning((s) => !s);
   };
 
   const reset = () => {
-    if (isRunning || (!isRunning && timeLeft < totalTime)) {
-      // signal expiry-like behaviour by calling onExpire
-      if (typeof onExpire === "function") onExpire();
-    }
     const newTimeInSeconds = Math.max(1, Math.floor(inputTime)) * 60;
     setTimeLeft(newTimeInSeconds);
     setTotalTime(newTimeInSeconds);
-    setIsRunning(false);
+    setInternalRunning(false);
   };
 
   const setInputTime = (minutes: number) => {
@@ -98,7 +99,7 @@ export default function useTimer(initialMinutes = 5, onExpire?: () => void): Use
     reset,
     formatTime,
     getColorClass,
-    sessionStartTime: sessionStartTimeRef.current,
+    sessionStartTime,
   } as UseTimerResult;
 }
 

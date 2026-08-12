@@ -8,7 +8,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
+import org.springframework.boot.resttestclient.TestRestTemplate;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -29,6 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * and mocks AuthenticationContext to provide a consistent test user.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureTestRestTemplate
 @Import({TestcontainersConfiguration.class, TestAuthenticationConfig.class, TestSecurityConfiguration.class})
 @org.springframework.test.context.ActiveProfiles("test")
 class PomodoroSessionIntegrationTest {
@@ -157,9 +159,9 @@ class PomodoroSessionIntegrationTest {
         PomodoroSession existingSessionEntity = createTestPomodoroSessionInDb("for lookup");
 
         // Act: Send GET request for specific Pomodoro session by ID
-        ResponseEntity<PomodoroSession> response = restTemplate.getForEntity(
+        ResponseEntity<dev.iainkirkham.mental_planner_backend.pomodoro.dto.PomodoroSessionResponseDTO> response = restTemplate.getForEntity(
                 "/api/pomodoro/" + existingSessionEntity.getId(),
-                PomodoroSession.class
+                dev.iainkirkham.mental_planner_backend.pomodoro.dto.PomodoroSessionResponseDTO.class
         );
 
         // Assert: Verify successful retrieval with matching data from database entity
@@ -175,9 +177,9 @@ class PomodoroSessionIntegrationTest {
     @Test
     void shouldReturnNotFoundForNonExistentPomodoroSession() {
         // Act: Attempt to retrieve Pomodoro session using non-existent ID
-        ResponseEntity<PomodoroSession> response = restTemplate.getForEntity(
+        ResponseEntity<Void> response = restTemplate.getForEntity(
                 "/api/pomodoro/999",
-                PomodoroSession.class
+                Void.class
         );
 
         // Assert: Verify proper HTTP 404 Not Found response for missing resource
@@ -190,7 +192,8 @@ class PomodoroSessionIntegrationTest {
         PomodoroSession existingSessionEntity = createTestPomodoroSessionInDb("to be updated");
 
         // Arrange: Prepare update data with modified values (extended 60-minute session)
-        PomodoroSession updateSession = new PomodoroSession();
+        dev.iainkirkham.mental_planner_backend.pomodoro.dto.PomodoroSessionRequestDTO updateSession =
+            new dev.iainkirkham.mental_planner_backend.pomodoro.dto.PomodoroSessionRequestDTO();
         updateSession.setStartTime(FIXED_NOW.minusSeconds(120));
         updateSession.setEndTime(FIXED_NOW.plusSeconds(60 * 60)); // 60 minutes
         updateSession.setDuration(60);
@@ -198,11 +201,11 @@ class PomodoroSessionIntegrationTest {
         updateSession.setNotes("Updated a super focused session!");
 
         // Act: Send PUT request to update existing Pomodoro session
-        ResponseEntity<PomodoroSession> response = restTemplate.exchange(
+        ResponseEntity<dev.iainkirkham.mental_planner_backend.pomodoro.dto.PomodoroSessionResponseDTO> response = restTemplate.exchange(
                 "/api/pomodoro/" + existingSessionEntity.getId(),
                 HttpMethod.PUT,
                 new HttpEntity<>(updateSession),
-                PomodoroSession.class
+                dev.iainkirkham.mental_planner_backend.pomodoro.dto.PomodoroSessionResponseDTO.class
         );
 
         // Assert: Verify successful update with HTTP 200 and updated response data
@@ -225,7 +228,8 @@ class PomodoroSessionIntegrationTest {
     @Test
     void shouldReturnNotFoundWhenUpdatingNonExistentPomodoroSession() {
         // Arrange: Prepare update data for non-existent Pomodoro session
-        PomodoroSession updateSession = new PomodoroSession();
+        dev.iainkirkham.mental_planner_backend.pomodoro.dto.PomodoroSessionRequestDTO updateSession =
+            new dev.iainkirkham.mental_planner_backend.pomodoro.dto.PomodoroSessionRequestDTO();
         updateSession.setStartTime(FIXED_NOW);
         updateSession.setEndTime(FIXED_NOW.plusSeconds(25 * 60));
         updateSession.setDuration(25);
@@ -233,11 +237,11 @@ class PomodoroSessionIntegrationTest {
         updateSession.setNotes("Non-existent update");
 
         // Act: Attempt to update Pomodoro session that doesn't exist
-        ResponseEntity<PomodoroSession> response = restTemplate.exchange(
+        ResponseEntity<Void> response = restTemplate.exchange(
                 "/api/pomodoro/999",
                 HttpMethod.PUT,
                 new HttpEntity<>(updateSession),
-                PomodoroSession.class
+                Void.class
         );
 
         // Assert: Verify proper HTTP 404 Not Found response for missing resource

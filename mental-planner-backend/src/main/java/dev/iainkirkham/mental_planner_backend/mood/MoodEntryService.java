@@ -5,6 +5,7 @@ import dev.iainkirkham.mental_planner_backend.exception.ResourceNotFoundExceptio
 import dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryRequestDTO;
 import dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryResponseDTO;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -14,6 +15,7 @@ import java.util.List;
  * All operations are filtered by the authenticated user to ensure data isolation.
  */
 @Service
+@Transactional(readOnly = true)
 public class MoodEntryService {
 
     private final MoodEntryRepository moodEntryRepository;
@@ -34,6 +36,7 @@ public class MoodEntryService {
      * @param requestDTO The mood entry DTO to create.
      * @return The saved mood entry as a response DTO.
      */
+    @Transactional
     public MoodEntryResponseDTO createMoodEntry(MoodEntryRequestDTO requestDTO) {
         MoodEntry moodEntry = moodEntryMapper.toEntity(requestDTO);
         moodEntry.setId(null); // Ensure ID is null for new entries
@@ -91,6 +94,7 @@ public class MoodEntryService {
      * @return The updated mood entry as a response DTO.
      * @throws ResourceNotFoundException If the entry does not exist or doesn't belong to the user.
      */
+    @Transactional
     public MoodEntryResponseDTO updateMoodEntry(Long id, MoodEntryRequestDTO requestDTO) {
         String userId = authenticationContext.getCurrentUserId();
         MoodEntry existingMoodEntry = moodEntryRepository.findByIdAndUserId(id, userId)
@@ -108,6 +112,7 @@ public class MoodEntryService {
      * @param id The ID of the mood entry to delete.
      * @throws ResourceNotFoundException If no entry with the given ID exists or doesn't belong to the user.
      */
+    @Transactional
     public void deleteMoodEntry(Long id) {
         String userId = authenticationContext.getCurrentUserId();
         MoodEntry entry = moodEntryRepository.findByIdAndUserId(id, userId)

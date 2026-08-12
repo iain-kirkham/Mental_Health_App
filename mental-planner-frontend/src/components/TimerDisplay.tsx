@@ -28,7 +28,7 @@ export function TimerDisplay({
              aria-label={`Timer: ${formatTime(timeLeft)} remaining`}
          >
             {/* Outer glow effect - subtle for a minimal look */}
-            <div className={`absolute inset-0 rounded-full blur-sm opacity-10 ${getColorClass()}`} aria-hidden="true" />
+            <div className={`absolute inset-0 rounded-full blur-xs opacity-10 ${getColorClass()}`} aria-hidden="true" />
 
              {/* Background circle */}
             <svg

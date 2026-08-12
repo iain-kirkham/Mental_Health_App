@@ -20,7 +20,7 @@ Ensure you have the following installed:
 - **[Docker Compose](https://docs.docker.com/compose/install/)**
 - **[Git](https://git-scm.com/)**
 - **[Pnpm](https://pnpm.io/)**
-- **[Java 17 or later](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)**
+- **[Java 21 or later](https://www.oracle.com/java/technologies/javase/jdk21-archive-downloads.html)**
 
 ### Running the Application
 

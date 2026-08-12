@@ -14,7 +14,6 @@ type Props = {
 export default function MoodOption({ value, label, icon, colorClass, selected, onSelect, disabled }: Props) {
   return (
     <Button
-      key={value}
       variant="outline"
       className={`flex flex-col items-center p-4 min-h-20 flex-1 transition-all duration-300 hover:scale-105 hover:shadow-md ${
         selected ? `${colorClass} border-2 scale-110 shadow-lg` : "border-2 border-slate-200 dark:border-slate-700 hover:border-slate-300"

@@ -27,7 +27,7 @@ export default function StatusAlerts({ submitStatus, errorMessage, showAlert, al
       )}
 
       {showAlert && (
-        <Alert className="mb-6 bg-gradient-to-r from-red-50 to-orange-50 border-red-300 animate-in slide-in-from-top duration-500">
+        <Alert className="mb-6 bg-linear-to-r from-red-50 to-orange-50 border-red-300 animate-in slide-in-from-top duration-500">
           <AlertDescription className="text-red-700 font-semibold text-center">{alertMessage ?? '⏰ Time\'s up! Great work! 🎯'}</AlertDescription>
         </Alert>
       )}

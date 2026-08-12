@@ -5,7 +5,6 @@ import dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryResponseDTO;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Mapper class for converting between MoodEntry entities and DTOs.
@@ -70,7 +69,7 @@ public class MoodEntryMapper {
 
         return entities.stream()
                 .map(this::toResponseDTO)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     /**

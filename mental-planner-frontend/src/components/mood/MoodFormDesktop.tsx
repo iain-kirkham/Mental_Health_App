@@ -16,7 +16,6 @@ type Props = {
   selectedMood: number | null;
   setSelectedMood: (v: number | null) => void;
   formErrors: FormErrors;
-  setFormErrors: (fn: (prev: any) => any) => void;
   date: Date | undefined;
   setDate: (d: Date | undefined) => void;
   time: string;
@@ -33,7 +32,7 @@ type Props = {
   formatDate: (d: Date | undefined) => string;
 };
 
-export default function MoodFormDesktop({ submitStatus, errorMessage, isSubmitting, selectedMood, setSelectedMood, formErrors, setFormErrors, date, setDate, time, setTime, factors, setFactors, newFactor, setNewFactor, showFactorInput, setShowFactorInput, notes, setNotes, handleSubmit, formatDate, }: Props) {
+export default function MoodFormDesktop({ submitStatus, errorMessage, isSubmitting, selectedMood, setSelectedMood, formErrors, date, setDate, time, setTime, factors, setFactors, newFactor, setNewFactor, showFactorInput, setShowFactorInput, notes, setNotes, handleSubmit, formatDate, }: Props) {
   return (
     <div className="hidden md:block w-full">
       <PageInset size="wide">
@@ -77,7 +76,7 @@ export default function MoodFormDesktop({ submitStatus, errorMessage, isSubmitti
               )}
             </div>
 
-            <FactorsSection factors={factors} setFactors={setFactors} newFactor={newFactor} setNewFactor={setNewFactor} showFactorInput={showFactorInput} setShowFactorInput={setShowFactorInput} isSubmitting={isSubmitting} formErrors={{ newFactor: formErrors.newFactor }} setFormErrors={setFormErrors} />
+            <FactorsSection factors={factors} setFactors={setFactors} newFactor={newFactor} setNewFactor={setNewFactor} showFactorInput={showFactorInput} setShowFactorInput={setShowFactorInput} isSubmitting={isSubmitting} formErrors={{ newFactor: formErrors.newFactor }} />
           </div>
 
           <div className="col-span-5 p-6 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col">
