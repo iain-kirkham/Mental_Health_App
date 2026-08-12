@@ -1,5 +1,6 @@
 package dev.iainkirkham.mental_planner_backend.pomodoro.dto;
 
+import dev.iainkirkham.mental_planner_backend.pomodoro.EnergyRating;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -31,5 +32,11 @@ public class PomodoroSessionRequestDTO {
     private Short score;
 
     private String notes;
+
+    /**
+     * Optional lightweight rating of whether this session left the user
+     * feeling energized or drained.
+     */
+    private EnergyRating energyRating;
 }
 

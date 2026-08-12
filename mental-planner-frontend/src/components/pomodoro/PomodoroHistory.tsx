@@ -13,6 +13,23 @@ function getScoreEmoji(score: number) {
     return SCORE_EMOJIS[score - 1] || '😐'
 }
 
+function EnergyBadge({ energyRating }: { energyRating: PomodoroSessionResponseDTO['energyRating'] }) {
+    if (!energyRating) return null
+
+    const isEnergizing = energyRating === 'ENERGIZING'
+    return (
+        <span
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+                isEnergizing
+                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                    : 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
+            }`}
+        >
+            {isEnergizing ? '⚡ Energizing' : '🪫 Draining'}
+        </span>
+    )
+}
+
 function formatDateTime(dateTime: string | null): string {
     if (!dateTime) return 'Unknown'
     const date = new Date(dateTime)
@@ -109,6 +126,9 @@ export default function PomodoroHistory() {
                                             <p className="text-xs text-muted-foreground">
                                                 {formatDateTime(session.endTime)}
                                             </p>
+                                            <div className="mt-1">
+                                                <EnergyBadge energyRating={session.energyRating} />
+                                            </div>
                                         </div>
                                     </div>
                                     <Button

@@ -1,12 +1,15 @@
 // Types for ADHD Focus Companion
 
 // Pomodoro Session Types
+export type EnergyRating = 'ENERGIZING' | 'DRAINING';
+
 export interface PomodoroSessionCreationDTO {
     startTime: string | null;
     endTime: string;
     duration: number;
     score: number;
     notes: string;
+    energyRating: EnergyRating | null;
 }
 
 export interface PomodoroSessionResponseDTO {
@@ -16,6 +19,7 @@ export interface PomodoroSessionResponseDTO {
     duration: number;
     score: number;
     notes: string;
+    energyRating: EnergyRating | null;
 }
 
 // Mood Entry Types

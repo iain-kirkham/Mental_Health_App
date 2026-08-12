@@ -61,6 +61,14 @@ public class PomodoroSession {
     private String notes;
 
     /**
+     * Optional lightweight rating of whether this session left the user
+     * feeling energized or drained.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "energy_rating")
+    private EnergyRating energyRating;
+
+    /**
      * The Clerk user ID of the user who created this pomodoro session.
      * This field is used to ensure data isolation between users.
      */

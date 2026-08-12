@@ -31,6 +31,7 @@ public class PomodoroSessionMapper {
         entity.setDuration(dto.getDuration());
         entity.setScore(dto.getScore());
         entity.setNotes(dto.getNotes());
+        entity.setEnergyRating(dto.getEnergyRating());
 
         return entity;
     }
@@ -54,6 +55,7 @@ public class PomodoroSessionMapper {
         dto.setDuration(entity.getDuration());
         dto.setScore(entity.getScore());
         dto.setNotes(entity.getNotes());
+        dto.setEnergyRating(entity.getEnergyRating());
 
         return dto;
     }
@@ -91,6 +93,7 @@ public class PomodoroSessionMapper {
         entity.setDuration(dto.getDuration());
         entity.setScore(dto.getScore());
         entity.setNotes(dto.getNotes());
+        entity.setEnergyRating(dto.getEnergyRating());
     }
 }
 

@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import usePomodoroSession from "@/hooks/usePomodoroSession";
-import type { PomodoroSessionCreationDTO } from "@/types";
+import type { EnergyRating, PomodoroSessionCreationDTO } from "@/types";
 
 export default function useSessionManager(getToken: () => Promise<string | null>) {
   const [showSessionForm, setShowSessionForm] = useState(false);
   const [score, setScore] = useState<number>(3);
   const [notes, setNotes] = useState<string>("");
+  const [energyRating, setEnergyRating] = useState<EnergyRating | null>(null);
   const statusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { isSubmitting, submitStatus, errorMessage, saveSession, setSubmitStatus } = usePomodoroSession(getToken);
@@ -26,6 +27,7 @@ export default function useSessionManager(getToken: () => Promise<string | null>
       duration: Math.round((totalTime - timeLeft) / 60),
       score,
       notes: notes.trim(),
+      energyRating,
     };
 
     const result = await saveSession(sessionData);
@@ -34,6 +36,7 @@ export default function useSessionManager(getToken: () => Promise<string | null>
       setShowSessionForm(false);
       setScore(3);
       setNotes("");
+      setEnergyRating(null);
 
       // Auto-clear status
       if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current);
@@ -50,6 +53,8 @@ export default function useSessionManager(getToken: () => Promise<string | null>
     setScore,
     notes,
     setNotes,
+    energyRating,
+    setEnergyRating,
     isSubmitting,
     submitStatus,
     errorMessage,

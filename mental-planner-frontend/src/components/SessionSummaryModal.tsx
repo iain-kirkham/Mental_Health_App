@@ -1,12 +1,15 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import type { EnergyRating } from "@/types";
 
 interface SessionSummaryModalProps {
     score: number;
     notes: string;
+    energyRating: EnergyRating | null;
     onScoreChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
     onNotesChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+    onEnergyRatingChange: (rating: EnergyRating | null) => void;
     onCancel: () => void;
     onSave: () => void;
     isSubmitting?: boolean;
@@ -15,8 +18,10 @@ interface SessionSummaryModalProps {
 export function SessionSummaryModal({
                                         score,
                                         notes,
+                                        energyRating,
                                         onScoreChange,
                                         onNotesChange,
+                                        onEnergyRatingChange,
                                         onCancel,
                                         onSave,
                                         isSubmitting = false,
@@ -57,6 +62,40 @@ export function SessionSummaryModal({
                         <div className="flex justify-between mt-2 text-xs text-slate-500">
                             <span>😢 Poor</span>
                             <span>🎉 Excellent</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block mb-3 font-semibold text-slate-700 dark:text-slate-200">
+                            🔋 How did it leave you feeling? (optional)
+                        </label>
+                        <div className="flex gap-3">
+                            <button
+                                type="button"
+                                onClick={() => onEnergyRatingChange(energyRating === 'ENERGIZING' ? null : 'ENERGIZING')}
+                                disabled={isSubmitting}
+                                aria-pressed={energyRating === 'ENERGIZING'}
+                                className={`flex-1 h-12 rounded-lg border-2 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                                    energyRating === 'ENERGIZING'
+                                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                                        : 'border-gray-300 dark:border-gray-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                }`}
+                            >
+                                ⚡ Energizing
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => onEnergyRatingChange(energyRating === 'DRAINING' ? null : 'DRAINING')}
+                                disabled={isSubmitting}
+                                aria-pressed={energyRating === 'DRAINING'}
+                                className={`flex-1 h-12 rounded-lg border-2 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                                    energyRating === 'DRAINING'
+                                        ? 'border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
+                                        : 'border-gray-300 dark:border-gray-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                }`}
+                            >
+                                🪫 Draining
+                            </button>
                         </div>
                     </div>
 
