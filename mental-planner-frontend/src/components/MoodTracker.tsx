@@ -2,7 +2,11 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useAuth } from "@clerk/nextjs";
+import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
+import PageInset from "@/components/PageInset";
+import { Button } from "@/components/ui/button";
+import { BookOpen } from "lucide-react";
 import { API_ENDPOINTS, authenticatedFetch } from "@/lib/api-config";
 import type { MoodEntryCreationDTO } from "@/types";
 import type { FormErrors } from "@/components/mood/types";
@@ -151,6 +155,15 @@ export default function MoodTracker() {
             <PageHeader title={<>💭 How are you feeling?</>} subtitle={<>Track your mood and contributing factors</>} size="wide" />
             {/* Small spacer so content sits comfortably below the full-bleed header on mobile and desktop */}
             <div className="pt-4 md:pt-6" />
+
+            <PageInset size="wide" className="flex justify-end pb-2">
+                <Link href="/mood-tracker/history">
+                    <Button variant="outline" size="sm">
+                        <BookOpen className="mr-2 h-4 w-4" />
+                        View journal history
+                    </Button>
+                </Link>
+            </PageInset>
 
             {/* split mobile/desktop render into small components */}
             <MoodFormMobile
