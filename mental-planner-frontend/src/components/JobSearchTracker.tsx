@@ -45,7 +45,7 @@ function getStatusPillClass(status: JobApplicationStatus): string {
     case 'REJECTED':
       return 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200'
     default:
-      return 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200'
+      return 'bg-muted text-muted-foreground'
   }
 }
 
@@ -181,13 +181,13 @@ export default function JobSearchTracker() {
 
       <PageInset size="wide" className="pb-8 md:pb-10 space-y-6">
         {submitStatus === 'success' ? (
-          <p className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+          <p className="rounded-md border border-green-200 dark:border-green-900 bg-green-50 dark:bg-green-950 px-3 py-2 text-sm text-green-800 dark:text-green-300">
             Application saved.
           </p>
         ) : null}
 
         {submitStatus === 'error' ? (
-          <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
+          <p className="rounded-md border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950 px-3 py-2 text-sm text-rose-800 dark:text-rose-300">
             {errorMessage || 'Something went wrong. Please try again.'}
           </p>
         ) : null}
@@ -200,7 +200,7 @@ export default function JobSearchTracker() {
           <CardContent>
             <form onSubmit={handleAddEntry} className="grid grid-cols-1 gap-3 md:grid-cols-4 md:items-end">
               <div className="space-y-1 md:col-span-2">
-                <label htmlFor="companyName" className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                <label htmlFor="companyName" className="text-sm font-medium text-foreground">
                   Company
                 </label>
                 <Input
@@ -212,7 +212,7 @@ export default function JobSearchTracker() {
               </div>
 
               <div className="space-y-1">
-                <label htmlFor="roleTitle" className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                <label htmlFor="roleTitle" className="text-sm font-medium text-foreground">
                   Role title
                 </label>
                 <Input
@@ -224,7 +224,7 @@ export default function JobSearchTracker() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Status</label>
+                <label className="text-sm font-medium text-foreground">Status</label>
                 <Select
                   value={status}
                   onValueChange={(value) => {
@@ -273,16 +273,16 @@ export default function JobSearchTracker() {
                 <table className="w-full min-w-[520px] border-separate border-spacing-0">
                   <thead>
                     <tr>
-                      <th className="border-b border-slate-200 dark:border-slate-700 px-3 py-2 text-left text-sm font-medium text-slate-600 dark:text-slate-300">
+                      <th className="border-b border-border px-3 py-2 text-left text-sm font-medium text-muted-foreground">
                         Company
                       </th>
-                      <th className="border-b border-slate-200 dark:border-slate-700 px-3 py-2 text-left text-sm font-medium text-slate-600 dark:text-slate-300">
+                      <th className="border-b border-border px-3 py-2 text-left text-sm font-medium text-muted-foreground">
                         Role title
                       </th>
-                      <th className="border-b border-slate-200 dark:border-slate-700 px-3 py-2 text-left text-sm font-medium text-slate-600 dark:text-slate-300">
+                      <th className="border-b border-border px-3 py-2 text-left text-sm font-medium text-muted-foreground">
                         Status
                       </th>
-                      <th className="border-b border-slate-200 dark:border-slate-700 px-3 py-2 text-right text-sm font-medium text-slate-600 dark:text-slate-300">
+                      <th className="border-b border-border px-3 py-2 text-right text-sm font-medium text-muted-foreground">
                         Actions
                       </th>
                     </tr>
@@ -290,13 +290,13 @@ export default function JobSearchTracker() {
                   <tbody>
                     {entries.map((entry) => (
                       <tr key={entry.id}>
-                        <td className="border-b border-slate-100 dark:border-slate-800 px-3 py-3 text-sm text-slate-900 dark:text-slate-100">
+                        <td className="border-b border-border px-3 py-3 text-sm text-foreground">
                           {entry.companyName}
                         </td>
-                        <td className="border-b border-slate-100 dark:border-slate-800 px-3 py-3 text-sm text-slate-900 dark:text-slate-100">
+                        <td className="border-b border-border px-3 py-3 text-sm text-foreground">
                           {entry.roleTitle}
                         </td>
-                        <td className="border-b border-slate-100 dark:border-slate-800 px-3 py-3 text-sm min-w-[180px]">
+                        <td className="border-b border-border px-3 py-3 text-sm min-w-[180px]">
                           <Select
                             value={entry.status}
                             onValueChange={(value) => {
@@ -321,7 +321,7 @@ export default function JobSearchTracker() {
                             </SelectContent>
                           </Select>
                         </td>
-                        <td className="border-b border-slate-100 dark:border-slate-800 px-3 py-3 text-right">
+                        <td className="border-b border-border px-3 py-3 text-right">
                           <Button
                             variant="outline"
                             size="sm"

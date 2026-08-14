@@ -96,7 +96,7 @@ export default function MoodHistory() {
               return (
                 <li
                   key={entry.id}
-                  className="rounded-md border border-slate-200 dark:border-slate-700 p-4 space-y-2"
+                  className="rounded-md border border-border p-4 space-y-2"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2">
@@ -104,7 +104,7 @@ export default function MoodHistory() {
                         {moodOption?.icon}
                       </span>
                       <div>
-                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                        <p className="text-sm font-medium text-foreground">
                           {moodOption?.label ?? `Mood: ${entry.moodScore}`}
                         </p>
                         <p className="text-xs text-muted-foreground">
@@ -133,7 +133,7 @@ export default function MoodHistory() {
                   ) : null}
 
                   {entry.notes ? (
-                    <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+                    <p className="text-sm text-foreground whitespace-pre-wrap">
                       {entry.notes}
                     </p>
                   ) : null}

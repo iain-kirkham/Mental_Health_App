@@ -112,7 +112,7 @@ export default function PomodoroHistory() {
                         {sessions.map((session) => (
                             <li
                                 key={session.id}
-                                className="rounded-md border border-slate-200 dark:border-slate-700 p-4 space-y-2"
+                                className="rounded-md border border-border p-4 space-y-2"
                             >
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="flex items-center gap-2">
@@ -120,7 +120,7 @@ export default function PomodoroHistory() {
                                             {getScoreEmoji(session.score)}
                                         </span>
                                         <div>
-                                            <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                            <p className="text-sm font-medium text-foreground">
                                                 {session.duration} minute focus session
                                             </p>
                                             <p className="text-xs text-muted-foreground">
@@ -142,7 +142,7 @@ export default function PomodoroHistory() {
                                 </div>
 
                                 {session.notes ? (
-                                    <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+                                    <p className="text-sm text-foreground whitespace-pre-wrap">
                                         {session.notes}
                                     </p>
                                 ) : null}

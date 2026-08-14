@@ -33,20 +33,20 @@ export function SessionSummaryModal({
 
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-md w-full shadow-2xl border border-gray-200 dark:border-gray-700 animate-in zoom-in duration-300">
+            <div className="bg-card rounded-2xl p-8 max-w-md w-full shadow-2xl border border-border animate-in zoom-in duration-300">
                 <div className="text-center mb-6">
                     <div className="text-4xl mb-2">✨</div>
-                    <h2 className="text-2xl font-bold bg-linear-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                    <h2 className="text-2xl font-bold bg-linear-to-r from-primary to-[hsl(var(--chart-1))] bg-clip-text text-transparent">
                         Session Summary
                     </h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                    <p className="text-sm text-muted-foreground mt-1">
                         How did your focus session go?
                     </p>
                 </div>
 
                 <div className="space-y-5">
                     <div>
-                        <label className="block mb-3 font-semibold text-slate-700 dark:text-slate-200">
+                        <label className="block mb-3 font-semibold text-foreground">
                             {getScoreEmoji(score)} Your Score (1-5)
                         </label>
                         <Input
@@ -59,14 +59,14 @@ export function SessionSummaryModal({
                             disabled={isSubmitting}
                             aria-label="Session score"
                         />
-                        <div className="flex justify-between mt-2 text-xs text-slate-500">
+                        <div className="flex justify-between mt-2 text-xs text-muted-foreground">
                             <span>😢 Poor</span>
                             <span>🎉 Excellent</span>
                         </div>
                     </div>
 
                     <div>
-                        <label className="block mb-3 font-semibold text-slate-700 dark:text-slate-200">
+                        <label className="block mb-3 font-semibold text-foreground">
                             🔋 How did it leave you feeling? (optional)
                         </label>
                         <div className="flex gap-3">
@@ -78,7 +78,7 @@ export function SessionSummaryModal({
                                 className={`flex-1 h-12 rounded-lg border-2 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                                     energyRating === 'ENERGIZING'
                                         ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
-                                        : 'border-gray-300 dark:border-gray-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                        : 'border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                                 }`}
                             >
                                 ⚡ Energizing
@@ -91,7 +91,7 @@ export function SessionSummaryModal({
                                 className={`flex-1 h-12 rounded-lg border-2 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                                     energyRating === 'DRAINING'
                                         ? 'border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
-                                        : 'border-gray-300 dark:border-gray-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                        : 'border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                                 }`}
                             >
                                 🪫 Draining
@@ -100,7 +100,7 @@ export function SessionSummaryModal({
                     </div>
 
                     <div>
-                        <label className="block mb-3 font-semibold text-slate-700 dark:text-slate-200">
+                        <label className="block mb-3 font-semibold text-foreground">
                             📝 Notes (optional)
                         </label>
                         <textarea
@@ -108,7 +108,7 @@ export function SessionSummaryModal({
                             onChange={onNotesChange}
                             rows={4}
                             placeholder="What helped you focus? Any distractions?"
-                            className="w-full rounded-lg border-2 border-gray-300 dark:border-gray-600 p-3 dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all resize-none shadow-xs"
+                            className="w-full rounded-lg border-2 border-input bg-transparent p-3 text-foreground disabled:opacity-50 disabled:cursor-not-allowed focus:border-ring focus:ring-2 focus:ring-ring/30 transition-all resize-none shadow-xs"
                             disabled={isSubmitting}
                             aria-label="Session notes"
                         />
@@ -120,14 +120,14 @@ export function SessionSummaryModal({
                         variant="outline"
                         onClick={onCancel}
                         disabled={isSubmitting}
-                        className="flex-1 h-12 font-semibold border-2 hover:bg-slate-50 dark:hover:bg-slate-800"
+                        className="flex-1 h-12 font-semibold border-2"
                     >
                         Cancel
                     </Button>
                     <Button
                         onClick={onSave}
                         disabled={isSubmitting}
-                        className="flex-1 h-12 font-semibold bg-slate-600 hover:bg-slate-700 text-white focus-visible:ring-2 focus-visible:ring-slate-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                        className="flex-1 h-12 font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
                     >
                         {isSubmitting ? (
                             <>

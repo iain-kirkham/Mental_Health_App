@@ -135,7 +135,7 @@ export default function Timer() {
 
                 <div className="space-y-6">
                     {/* Timer Display: give a taller area so the timer sits visually centered on desktop too */}
-                    <div className="p-2 rounded-md bg-white dark:bg-slate-900 flex items-center justify-center min-h-[34vh] mb-6">
+                    <div className="p-2 rounded-md bg-card flex items-center justify-center min-h-[34vh] mb-6">
                         <TimerDisplay
                             timeLeft={timeLeft}
                             totalTime={totalTime}
@@ -146,8 +146,8 @@ export default function Timer() {
                     </div>
 
                     {/* Controls Section */}
-                    <div className="p-2 rounded-md bg-white dark:bg-slate-900 w-full md:max-w-xl mx-auto">
-                        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2 text-center md:text-left">
+                    <div className="p-2 rounded-md bg-card w-full md:max-w-xl mx-auto">
+                        <h3 className="text-sm font-semibold text-foreground mb-2 text-center md:text-left">
                             ⚙️ Session Settings
                         </h3>
                         <div className="w-full">

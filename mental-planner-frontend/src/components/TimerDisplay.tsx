@@ -43,7 +43,7 @@ export function TimerDisplay({
                      fill="none"
                      stroke="currentColor"
                      strokeWidth="8"
-                     className="text-slate-200 dark:text-slate-800 opacity-30"
+                     className="text-muted opacity-60"
                  />
              </svg>
 
@@ -79,12 +79,12 @@ export function TimerDisplay({
                     {formatTime(timeLeft)}
                 </div>
                  {!isRunning && timeLeft < totalTime && (
-                     <div className="text-sm mt-3 text-slate-500 dark:text-slate-400 font-medium bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full animate-in fade-in duration-300">
+                     <div className="text-sm mt-3 text-muted-foreground font-medium bg-muted px-3 py-1 rounded-full animate-in fade-in duration-300">
                          {Math.round(progress * 100)}% complete
                      </div>
                  )}
                  {isRunning && (
-                    <div className="text-xs mt-3 text-slate-400 dark:text-slate-500 font-medium">
+                    <div className="text-xs mt-3 text-muted-foreground font-medium">
                         ⏱️ In progress...
                     </div>
                  )}
