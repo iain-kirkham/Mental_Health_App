@@ -1,8 +1,7 @@
 /** @type {import('next').NextConfig} */
-// Enable the standalone output when not building on Windows so the
-// Docker build (Linux) produces the `/app/.next/standalone` folder expected
-// by the Dockerfile. Keep it disabled for local Windows builds to avoid
-// symlink EPERM issues.
+// Standalone output is only for a self-hosted Docker build (set DOCKER_BUILD=true
+// there). Vercel has its own tracing/bundling pipeline and breaks if this is set,
+// so it must stay unset for Vercel (and local) builds.
 module.exports = {
-  output: process.platform === 'win32' ? undefined : 'standalone',
+  output: process.env.DOCKER_BUILD === 'true' ? 'standalone' : undefined,
 };

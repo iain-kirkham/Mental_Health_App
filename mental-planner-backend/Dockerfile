@@ -15,7 +15,9 @@ FROM eclipse-temurin:21-jre
 
 WORKDIR /app
 COPY --from=builder /workspace/build/libs/*.jar app.jar
+COPY docker-entrypoint.sh entrypoint.sh
+RUN chmod +x entrypoint.sh
 
 EXPOSE 8080
 
-CMD ["java", "-jar", "app.jar"]
+ENTRYPOINT ["./entrypoint.sh"]
