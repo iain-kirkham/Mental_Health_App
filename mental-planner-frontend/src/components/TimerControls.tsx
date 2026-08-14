@@ -65,10 +65,10 @@ export function TimerControls({
             </div>
 
             <PageInset size="md" className="px-8 md:px-0">
-              <div className="w-full mt-4 md:mt-6 bg-slate-50 dark:bg-slate-900/50 p-3 md:p-4 rounded-md md:rounded-lg border border-slate-200 dark:border-slate-800">
+              <div className="w-full mt-4 md:mt-6 bg-muted/50 p-3 md:p-4 rounded-md md:rounded-lg border border-border">
                 <label
                     htmlFor="timer-minutes-input"
-                    className="block text-sm font-semibold mb-3 text-slate-700 dark:text-slate-200"
+                    className="block text-sm font-semibold mb-3 text-foreground"
                 >
                     ⏲️ Set Duration (Minutes)
                 </label>
@@ -84,7 +84,7 @@ export function TimerControls({
                     aria-label="Timer duration in minutes"
                 />
                 {disabledInput && (
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 text-center">
+                    <p className="text-xs text-muted-foreground mt-2 text-center">
                         Pause the timer to change duration
                     </p>
                 )}
