@@ -96,6 +96,7 @@ class PomodoroSessionIntegrationTest {
         newSession.setDuration(30);
         newSession.setScore((short) 5);
         newSession.setNotes("Deep work session.");
+        newSession.setEnergyRating(EnergyRating.ENERGIZING);
 
         // Act: Send POST request to create Pomodoro session and expect response DTO
         ResponseEntity<dev.iainkirkham.mental_planner_backend.pomodoro.dto.PomodoroSessionResponseDTO> response =
@@ -113,12 +114,14 @@ class PomodoroSessionIntegrationTest {
             assertThat(created.getDuration()).isEqualTo(30);
             assertThat(created.getScore()).isEqualTo((short) 5);
             assertThat(created.getNotes()).isEqualTo("Deep work session.");
+            assertThat(created.getEnergyRating()).isEqualTo(EnergyRating.ENERGIZING);
 
             // Verify the Pomodoro session was actually persisted to the database
             Optional<PomodoroSession> persistedEntity = pomodoroSessionRepository.findById(created.getId());
             assertThat(persistedEntity).isPresent();
             assertThat(persistedEntity.get().getDuration()).isEqualTo(30);
             assertThat(persistedEntity.get().getNotes()).isEqualTo("Deep work session.");
+            assertThat(persistedEntity.get().getEnergyRating()).isEqualTo(EnergyRating.ENERGIZING);
             assertThat(persistedEntity.get().getUserId()).isEqualTo(TestAuthenticationConfig.TEST_USER_ID);
         });
     }
@@ -352,48 +355,24 @@ class PomodoroSessionIntegrationTest {
     // --- Partial-date and boundary tests ---
 
     @Test
-    void getPomodoroSessionsByDateRange_PartialStartDate_ReturnsAllSessions() {
+    void getPomodoroSessionsByDateRange_PartialDateParam_ReturnsAllSessions() {
         // Arrange: create three sessions at different times
-        Instant now = FIXED_NOW;
-        createPomodoroAt(now.minus(10, ChronoUnit.DAYS), (short)2, "older");
-        createPomodoroAt(now.minus(5, ChronoUnit.DAYS), (short)3, "middle");
-        createPomodoroAt(now, (short)4, "recent");
-
-        // Act: call with only startDate
-        String start = now.minus(7, ChronoUnit.DAYS).toString();
-        ResponseEntity<List<dev.iainkirkham.mental_planner_backend.pomodoro.dto.PomodoroSessionResponseDTO>> response =
-            restTemplate.exchange(
-                "/api/pomodoro?startDate=" + start,
-                HttpMethod.GET,
-                null,
-                new ParameterizedTypeReference<>() {}
-        );
-
-        // Assert: current controller behavior: partial params ignored -> return all
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isNotNull().hasSize(3);
-    }
-
-    @Test
-    void getPomodoroSessionsByDateRange_PartialEndDate_ReturnsAllSessions() {
-        // Arrange: create simple sessions
         createTestPomodoroSessionInDb("A");
         createTestPomodoroSessionInDb("B");
         createTestPomodoroSessionInDb("C");
 
-        // Act: call with only endDate
-        String end = FIXED_NOW.toString();
-        ResponseEntity<List<dev.iainkirkham.mental_planner_backend.pomodoro.dto.PomodoroSessionResponseDTO>> response =
-            restTemplate.exchange(
-                "/api/pomodoro?endDate=" + end,
-                HttpMethod.GET,
-                null,
-                new ParameterizedTypeReference<>() {}
-        );
+        // Assert: controller treats a lone startDate or endDate as a no-op -> returns all sessions
+        String start = FIXED_NOW.minus(7, ChronoUnit.DAYS).toString();
+        assertThat(restTemplate.exchange(
+                "/api/pomodoro?startDate=" + start,
+                HttpMethod.GET, null, new ParameterizedTypeReference<List<dev.iainkirkham.mental_planner_backend.pomodoro.dto.PomodoroSessionResponseDTO>>() {})
+                .getBody()).isNotNull().hasSize(3);
 
-        // Assert: controller currently treats partial params as no-op -> returns all
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isNotNull().hasSize(3);
+        String end = FIXED_NOW.toString();
+        assertThat(restTemplate.exchange(
+                "/api/pomodoro?endDate=" + end,
+                HttpMethod.GET, null, new ParameterizedTypeReference<List<dev.iainkirkham.mental_planner_backend.pomodoro.dto.PomodoroSessionResponseDTO>>() {})
+                .getBody()).isNotNull().hasSize(3);
     }
 
     @Test

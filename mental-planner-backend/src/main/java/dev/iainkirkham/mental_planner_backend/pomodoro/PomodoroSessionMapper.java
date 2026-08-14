@@ -26,12 +26,7 @@ public class PomodoroSessionMapper {
         }
 
         PomodoroSession entity = new PomodoroSession();
-        entity.setStartTime(dto.getStartTime());
-        entity.setEndTime(dto.getEndTime());
-        entity.setDuration(dto.getDuration());
-        entity.setScore(dto.getScore());
-        entity.setNotes(dto.getNotes());
-        entity.setEnergyRating(dto.getEnergyRating());
+        updateEntityFromDTO(entity, dto);
 
         return entity;
     }

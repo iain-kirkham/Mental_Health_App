@@ -34,6 +34,7 @@ class PomodoroSessionMapperTest {
         requestDTO.setDuration(1500);
         requestDTO.setScore((short) 4);
         requestDTO.setNotes("Good session");
+        requestDTO.setEnergyRating(EnergyRating.ENERGIZING);
 
         // When
         PomodoroSession entity = mapper.toEntity(requestDTO);
@@ -47,6 +48,7 @@ class PomodoroSessionMapperTest {
         assertThat(entity.getDuration()).isEqualTo(1500);
         assertThat(entity.getScore()).isEqualTo((short) 4);
         assertThat(entity.getNotes()).isEqualTo("Good session");
+        assertThat(entity.getEnergyRating()).isEqualTo(EnergyRating.ENERGIZING);
     }
 
     @Test
@@ -59,6 +61,7 @@ class PomodoroSessionMapperTest {
         entity.setDuration(1500);
         entity.setScore((short) 5);
         entity.setNotes("Excellent focus");
+        entity.setEnergyRating(EnergyRating.DRAINING);
         entity.setUserId(TEST_USER_ID);
 
         // When
@@ -72,6 +75,7 @@ class PomodoroSessionMapperTest {
         assertThat(responseDTO.getDuration()).isEqualTo(1500);
         assertThat(responseDTO.getScore()).isEqualTo((short) 5);
         assertThat(responseDTO.getNotes()).isEqualTo("Excellent focus");
+        assertThat(responseDTO.getEnergyRating()).isEqualTo(EnergyRating.DRAINING);
         // userId should NOT be in response DTO
     }
 
@@ -111,6 +115,7 @@ class PomodoroSessionMapperTest {
         existingEntity.setDuration(1000);
         existingEntity.setScore((short) 3);
         existingEntity.setNotes("Old notes");
+        existingEntity.setEnergyRating(EnergyRating.DRAINING);
         existingEntity.setUserId(TEST_USER_ID);
 
         PomodoroSessionRequestDTO requestDTO = new PomodoroSessionRequestDTO();
@@ -119,6 +124,7 @@ class PomodoroSessionMapperTest {
         requestDTO.setDuration(1500);
         requestDTO.setScore((short) 5);
         requestDTO.setNotes("Updated notes");
+        requestDTO.setEnergyRating(EnergyRating.ENERGIZING);
 
         // When
         mapper.updateEntityFromDTO(existingEntity, requestDTO);
@@ -131,6 +137,7 @@ class PomodoroSessionMapperTest {
         assertThat(existingEntity.getDuration()).isEqualTo(1500);
         assertThat(existingEntity.getScore()).isEqualTo((short) 5);
         assertThat(existingEntity.getNotes()).isEqualTo("Updated notes");
+        assertThat(existingEntity.getEnergyRating()).isEqualTo(EnergyRating.ENERGIZING);
     }
 
     @Test

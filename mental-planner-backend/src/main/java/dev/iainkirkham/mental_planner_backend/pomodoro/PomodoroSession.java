@@ -65,7 +65,7 @@ public class PomodoroSession {
      * feeling energized or drained.
      */
     @Enumerated(EnumType.STRING)
-    @Column(name = "energy_rating")
+    @Column(name = "energy_rating", length = 20)
     private EnergyRating energyRating;
 
     /**

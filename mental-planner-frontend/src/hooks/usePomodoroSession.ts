@@ -13,21 +13,10 @@ export default function usePomodoroSession(getToken: () => Promise<string | null
     setErrorMessage('');
 
     try {
-      const response = await apiSavePomodoroSession(session, getToken);
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMsg = errorData.message || `Failed to save session (Status: ${response.status})`;
-        setSubmitStatus('error');
-        setErrorMessage(errorMsg);
-        setIsSubmitting(false);
-        return { ok: false, response } as const;
-      }
-
-      await response.json();
+      await apiSavePomodoroSession(session, getToken);
       setSubmitStatus('success');
       setIsSubmitting(false);
-      return { ok: true, response } as const;
+      return { ok: true } as const;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'An unexpected error occurred';
       setSubmitStatus('error');

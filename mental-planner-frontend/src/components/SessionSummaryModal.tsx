@@ -1,6 +1,8 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import MoodOption from "@/components/mood/MoodOption";
+import { getScoreEmoji, ENERGY_RATING_OPTIONS } from "@/lib/pomodoro-format";
 import type { EnergyRating } from "@/types";
 
 interface SessionSummaryModalProps {
@@ -26,11 +28,6 @@ export function SessionSummaryModal({
                                         onSave,
                                         isSubmitting = false,
                                     }: SessionSummaryModalProps) {
-    const getScoreEmoji = (score: number) => {
-        const emojis = ['😢', '😕', '😐', '😊', '🎉'];
-        return emojis[score - 1] || '😐';
-    };
-
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
             <div className="bg-card rounded-2xl p-8 max-w-md w-full shadow-2xl border border-border animate-in zoom-in duration-300">
@@ -70,32 +67,19 @@ export function SessionSummaryModal({
                             🔋 How did it leave you feeling? (optional)
                         </label>
                         <div className="flex gap-3">
-                            <button
-                                type="button"
-                                onClick={() => onEnergyRatingChange(energyRating === 'ENERGIZING' ? null : 'ENERGIZING')}
-                                disabled={isSubmitting}
-                                aria-pressed={energyRating === 'ENERGIZING'}
-                                className={`flex-1 h-12 rounded-lg border-2 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                                    energyRating === 'ENERGIZING'
-                                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
-                                        : 'border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                                }`}
-                            >
-                                ⚡ Energizing
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => onEnergyRatingChange(energyRating === 'DRAINING' ? null : 'DRAINING')}
-                                disabled={isSubmitting}
-                                aria-pressed={energyRating === 'DRAINING'}
-                                className={`flex-1 h-12 rounded-lg border-2 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                                    energyRating === 'DRAINING'
-                                        ? 'border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
-                                        : 'border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                                }`}
-                            >
-                                🪫 Draining
-                            </button>
+                            {ENERGY_RATING_OPTIONS.map((option) => (
+                                <MoodOption<EnergyRating>
+                                    key={option.value}
+                                    value={option.value}
+                                    label={option.label}
+                                    icon={option.icon}
+                                    colorClass={option.colorClass}
+                                    selected={energyRating === option.value}
+                                    onSelect={(v) => onEnergyRatingChange(energyRating === v ? null : v)}
+                                    disabled={isSubmitting}
+                                    ariaLabel={option.ariaLabel}
+                                />
+                            ))}
                         </div>
                     </div>
 

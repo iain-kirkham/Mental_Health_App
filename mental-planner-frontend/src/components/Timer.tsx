@@ -1,40 +1,17 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
-import { useAuth } from "@clerk/nextjs";
 import { History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StatusAlerts from "@/components/StatusAlerts";
 import { TimerDisplay } from "./TimerDisplay";
 import { TimerControls } from "./TimerControls";
-import { SessionSummaryModal } from "./SessionSummaryModal";
 import PageHeader from "./PageHeader";
 import PageInset from "./PageInset";
-import useTimer from "@/hooks/useTimer";
-import useSessionManager from "@/hooks/useSessionManager";
+import { usePomodoroSessionContext } from "@/contexts/PomodoroSessionContext";
 
 export default function Timer() {
-    const { getToken } = useAuth();
-    const [showAlert, setShowAlert] = useState(false);
-    const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
-
-    const {
-        showSessionForm,
-        setShowSessionForm,
-        score,
-        setScore,
-        notes,
-        setNotes,
-        energyRating,
-        setEnergyRating,
-        isSubmitting,
-        submitStatus,
-        errorMessage,
-        handleSaveSession: saveSessionManager,
-    } = useSessionManager(getToken);
-
-    // useTimer hook handles timing, input and formatting
     const {
         timeLeft,
         totalTime,
@@ -45,37 +22,15 @@ export default function Timer() {
         reset,
         formatTime,
         getColorClass,
-        sessionStartTime: hookSessionStartTime,
-    } = useTimer(5, ( ) => {
-        setShowAlert(true);
-        setShowSessionForm(true);
-        setTimeout(() => setShowAlert(false), 5000);
-    });
-
-    const handleStartPause = () => {
-        // keep a copy in local state for the session payload
-        if (!isRunning) setSessionStartTime(new Date());
-        startPause();
-    };
-
-    const handleReset = () => {
-        reset();
-        setShowAlert(false);
-    };
+        showAlert,
+        submitStatus,
+        errorMessage,
+    } = usePomodoroSessionContext();
 
     const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = parseInt(e.target.value);
         if (!isNaN(value) && value > 0) {
             setInputTime(value);
-        }
-    };
-
-    const handleSaveSession = async () => {
-        const result = await saveSessionManager({ startTime: (hookSessionStartTime ?? sessionStartTime), totalTime, timeLeft });
-
-        if (result.ok) {
-            setSessionStartTime(null);
-            setInputTime(inputTime);
         }
     };
 
@@ -116,8 +71,8 @@ export default function Timer() {
                     <div className="w-full mt-8">
                         <TimerControls
                             isRunning={isRunning}
-                            onStartPause={handleStartPause}
-                            onReset={handleReset}
+                            onStartPause={startPause}
+                            onReset={reset}
                             inputTime={inputTime}
                             onInputChange={handleTimeChange}
                             disabledInput={isRunning}
@@ -153,8 +108,8 @@ export default function Timer() {
                         <div className="w-full">
                             <TimerControls
                                 isRunning={isRunning}
-                                onStartPause={handleStartPause}
-                                onReset={handleReset}
+                                onStartPause={startPause}
+                                onReset={reset}
                                 inputTime={inputTime}
                                 onInputChange={handleTimeChange}
                                 disabledInput={isRunning}
@@ -164,20 +119,6 @@ export default function Timer() {
                  </div>
                  </PageInset>
              </div>
-
-            {showSessionForm && (
-                  <SessionSummaryModal
-                      score={score}
-                      notes={notes}
-                      energyRating={energyRating}
-                      onScoreChange={(e) => setScore(Number(e.target.value))}
-                      onNotesChange={(e) => setNotes(e.target.value)}
-                      onEnergyRatingChange={setEnergyRating}
-                      onCancel={() => setShowSessionForm(false)}
-                      onSave={handleSaveSession}
-                      isSubmitting={isSubmitting}
-                  />
-              )}
          </>
      );
  }

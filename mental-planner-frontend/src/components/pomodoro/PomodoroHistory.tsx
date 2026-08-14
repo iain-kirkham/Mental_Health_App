@@ -3,45 +3,22 @@
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { getPomodoroSessions, deletePomodoroSession } from '@/lib/pomodoro-api'
+import { getScoreEmoji, getEnergyRatingOption } from '@/lib/pomodoro-format'
+import { formatDateTime } from '@/lib/utils'
 import type { PomodoroSessionResponseDTO } from '@/types'
 
-const SCORE_EMOJIS = ['😢', '😕', '😐', '😊', '🎉']
-
-function getScoreEmoji(score: number) {
-    return SCORE_EMOJIS[score - 1] || '😐'
-}
-
 function EnergyBadge({ energyRating }: { energyRating: PomodoroSessionResponseDTO['energyRating'] }) {
-    if (!energyRating) return null
+    const option = getEnergyRatingOption(energyRating)
+    if (!option) return null
 
-    const isEnergizing = energyRating === 'ENERGIZING'
     return (
-        <span
-            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
-                isEnergizing
-                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
-                    : 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
-            }`}
-        >
-            {isEnergizing ? '⚡ Energizing' : '🪫 Draining'}
-        </span>
+        <Badge variant="outline" className={option.badgeClass}>
+            {option.icon} {option.label}
+        </Badge>
     )
-}
-
-function formatDateTime(dateTime: string | null): string {
-    if (!dateTime) return 'Unknown'
-    const date = new Date(dateTime)
-    if (isNaN(date.getTime())) return dateTime
-    return date.toLocaleString('en-GB', {
-        weekday: 'short',
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    })
 }
 
 export default function PomodoroHistory() {
