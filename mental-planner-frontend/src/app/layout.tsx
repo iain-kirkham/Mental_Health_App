@@ -8,6 +8,8 @@ import {
 
 import { Navbar } from '@/components/Navbar'
 import { ThemeProvider } from '@/components/theme-provider'
+import { PomodoroSessionProvider } from '@/contexts/PomodoroSessionContext'
+import { GlobalPomodoroModal } from '@/components/GlobalPomodoroModal'
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -37,8 +39,11 @@ export default function RootLayout({
       >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <ClerkProvider>
-            <Navbar />
-            {children}
+            <PomodoroSessionProvider>
+              <Navbar />
+              {children}
+              <GlobalPomodoroModal />
+            </PomodoroSessionProvider>
           </ClerkProvider>
         </ThemeProvider>
       </body>

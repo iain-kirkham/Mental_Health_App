@@ -6,24 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { getMoodEntries, deleteMoodEntry } from '@/lib/mood-api'
+import { formatDateTime } from '@/lib/utils'
 import { MOOD_OPTIONS } from '@/components/mood/MoodSelector'
 import type { MoodEntryResponseDTO } from '@/types'
 
 function getMoodOption(score: number) {
   return MOOD_OPTIONS.find((option) => option.value === score)
-}
-
-function formatEntryDateTime(dateTime: string): string {
-  const date = new Date(dateTime)
-  if (isNaN(date.getTime())) return dateTime
-  return date.toLocaleString('en-GB', {
-    weekday: 'short',
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
 }
 
 export default function MoodHistory() {
@@ -108,7 +96,7 @@ export default function MoodHistory() {
                           {moodOption?.label ?? `Mood: ${entry.moodScore}`}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {formatEntryDateTime(entry.dateTime)}
+                          {formatDateTime(entry.dateTime)}
                         </p>
                       </div>
                     </div>

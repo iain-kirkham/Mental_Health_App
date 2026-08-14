@@ -1,17 +1,18 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 
-type Props = {
-  value: number;
+type Props<T> = {
+  value: T;
   label: string;
   icon: React.ReactNode;
   colorClass: string;
   selected: boolean;
-  onSelect: (v: number) => void;
+  onSelect: (v: T) => void;
   disabled?: boolean;
+  ariaLabel?: string;
 };
 
-export default function MoodOption({ value, label, icon, colorClass, selected, onSelect, disabled }: Props) {
+export default function MoodOption<T>({ value, label, icon, colorClass, selected, onSelect, disabled, ariaLabel }: Props<T>) {
   return (
     <Button
       variant="outline"
@@ -19,7 +20,7 @@ export default function MoodOption({ value, label, icon, colorClass, selected, o
         selected ? `${colorClass} border-2 scale-110 shadow-lg` : "border-2 border-border hover:border-ring"
       }`}
       onClick={() => onSelect(value)}
-      aria-label={`Select mood: ${label}`}
+      aria-label={ariaLabel ?? `Select mood: ${label}`}
       aria-pressed={selected}
       disabled={disabled}
     >

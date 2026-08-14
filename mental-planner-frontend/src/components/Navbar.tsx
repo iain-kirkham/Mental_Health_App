@@ -15,11 +15,13 @@ import { SignInButton, SignOutButton, useUser } from '@clerk/nextjs'
 import { Timer, LineChart, User, Home as HomeIcon, BriefcaseBusiness, Menu, X } from 'lucide-react'
 import React, { useState } from 'react'
 import PageInset from '@/components/PageInset'
+import { usePomodoroSessionContext } from '@/contexts/PomodoroSessionContext'
 
 export function Navbar() {
     const { isSignedIn, user } = useUser()
     const pathname = usePathname() || '/'
     const [mobileOpen, setMobileOpen] = useState(false)
+    const { isRunning, timeLeft, formatTime } = usePomodoroSessionContext()
 
     const routes = [
         {
@@ -74,6 +76,14 @@ export function Navbar() {
                                                 >
                                                     {route.icon}
                                                     <span className="hidden sm:inline">{route.label}</span>
+                                                    {route.href === '/pomodoro' && isRunning && (
+                                                        <span
+                                                            className="ml-2 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 text-xs font-mono font-semibold px-2 py-0.5 tabular-nums"
+                                                            aria-label={`Pomodoro session running, ${formatTime(timeLeft)} remaining`}
+                                                        >
+                                                            {formatTime(timeLeft)}
+                                                        </span>
+                                                    )}
                                                 </Link>
                                             </NavigationMenuItem>
                                         )
@@ -143,6 +153,14 @@ export function Navbar() {
                                     >
                                         {route.icon}
                                         <span className="ml-1">{route.label}</span>
+                                        {route.href === '/pomodoro' && isRunning && (
+                                            <span
+                                                className="ml-2 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 text-xs font-mono font-semibold px-2 py-0.5 tabular-nums"
+                                                aria-label={`Pomodoro session running, ${formatTime(timeLeft)} remaining`}
+                                            >
+                                                {formatTime(timeLeft)}
+                                            </span>
+                                        )}
                                     </Link>
                                 )
                             })}

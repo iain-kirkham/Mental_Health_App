@@ -64,6 +64,7 @@ class PomodoroSessionControllerTest {
         testRequestDTO.setDuration(25);
         testRequestDTO.setScore((short) 4);
         testRequestDTO.setNotes("Focused work session.");
+        testRequestDTO.setEnergyRating(EnergyRating.ENERGIZING);
 
         // Expected service response after successful creation/retrieval
         savedResponseDTO = new PomodoroSessionResponseDTO();
@@ -73,6 +74,7 @@ class PomodoroSessionControllerTest {
         savedResponseDTO.setDuration(25);
         savedResponseDTO.setScore((short) 4);
         savedResponseDTO.setNotes("Focused work session.");
+        savedResponseDTO.setEnergyRating(EnergyRating.ENERGIZING);
 
         // Modified data for update operations testing
         updateRequestDTO = new PomodoroSessionRequestDTO();
@@ -81,6 +83,7 @@ class PomodoroSessionControllerTest {
         updateRequestDTO.setDuration(30);
         updateRequestDTO.setScore((short) 5); // Improved score
         updateRequestDTO.setNotes("Even more focused work session, extended!");
+        updateRequestDTO.setEnergyRating(EnergyRating.DRAINING);
 
         // Expected service response after successful update
         updatedResponseDTO = new PomodoroSessionResponseDTO();
@@ -90,6 +93,7 @@ class PomodoroSessionControllerTest {
         updatedResponseDTO.setDuration(30);
         updatedResponseDTO.setScore((short) 5);
         updatedResponseDTO.setNotes("Even more focused work session, extended!");
+        updatedResponseDTO.setEnergyRating(EnergyRating.DRAINING);
     }
 
     @Test
