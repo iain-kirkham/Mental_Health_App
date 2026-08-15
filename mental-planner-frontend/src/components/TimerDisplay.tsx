@@ -1,10 +1,9 @@
 import React from "react";
+import { formatTime, getTimerColorClass } from "@/lib/pomodoro-format";
 
 interface TimerDisplayProps {
     timeLeft: number;
     totalTime: number;
-    formatTime: (seconds: number) => string;
-    getColorClass: () => string;
     isRunning: boolean;
 }
 
@@ -14,12 +13,11 @@ const circumference = 2 * Math.PI * radius;
 export function TimerDisplay({
                                   timeLeft,
                                   totalTime,
-                                  formatTime,
-                                  getColorClass,
                                   isRunning,
                               }: TimerDisplayProps) {
      const progress = totalTime > 0 ? 1 - timeLeft / totalTime : 0;
      const strokeDashoffset = circumference * (1 - progress);
+     const colorClass = getTimerColorClass(timeLeft, totalTime);
 
      return (
          <div
@@ -28,7 +26,7 @@ export function TimerDisplay({
              aria-label={`Timer: ${formatTime(timeLeft)} remaining`}
          >
             {/* Outer glow effect - subtle for a minimal look */}
-            <div className={`absolute inset-0 rounded-full blur-xs opacity-10 ${getColorClass()}`} aria-hidden="true" />
+            <div className={`absolute inset-0 rounded-full blur-xs opacity-10 ${colorClass}`} aria-hidden="true" />
 
              {/* Background circle */}
             <svg
@@ -63,7 +61,7 @@ export function TimerDisplay({
                      strokeDasharray={circumference}
                      strokeDashoffset={strokeDashoffset}
                      strokeLinecap="round"
-                     className={`${getColorClass()} transition-all duration-300 ${isRunning ? 'opacity-100' : 'opacity-80'}`}
+                     className={`${colorClass} transition-all duration-300 ${isRunning ? 'opacity-100' : 'opacity-80'}`}
                      style={{
                         transition: 'stroke-dashoffset 0.3s ease-in-out'
                      }}
@@ -73,7 +71,7 @@ export function TimerDisplay({
              {/* Center content */}
              <div className="flex flex-col items-center z-10">
                 <div
-                    className={`text-6xl font-mono font-bold tabular-nums ${getColorClass()} transition-colors duration-300`}
+                    className={`text-6xl font-mono font-bold tabular-nums ${colorClass} transition-colors duration-300`}
                     aria-live="polite"
                 >
                     {formatTime(timeLeft)}

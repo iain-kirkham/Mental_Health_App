@@ -23,5 +23,6 @@ public class PomodoroSessionResponseDTO {
     private Short score;
     private String notes;
     private EnergyRating energyRating;
+    private Long taskId;
 }
 

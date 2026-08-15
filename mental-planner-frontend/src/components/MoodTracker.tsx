@@ -3,15 +3,15 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
-import PageHeader from "@/components/PageHeader";
-import PageInset from "@/components/PageInset";
 import { Button } from "@/components/ui/button";
 import { BookOpen } from "lucide-react";
 import { API_ENDPOINTS, authenticatedFetch } from "@/lib/api-config";
+import { toFriendlyMessage } from "@/lib/connectivity";
 import type { MoodEntryCreationDTO } from "@/types";
 import type { FormErrors } from "@/components/mood/types";
 import MoodFormMobile from "@/components/mood/MoodFormMobile";
 import MoodFormDesktop from "@/components/mood/MoodFormDesktop";
+import PageHeader from "@/components/PageHeader";
 
 /** Maximum length for a custom factor name. */
 const MAX_FACTOR_LENGTH = 50;
@@ -119,9 +119,9 @@ export default function MoodTracker() {
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                const errorMsg = errorData.message || `Status: ${response.status}`;
+                const message = errorData.message || `We couldn't save your mood entry right now. Please try again.`;
                 setSubmitStatus('error');
-                setErrorMessage(`We couldn't save your mood entry right now. Please try again. (${errorMsg})`);
+                setErrorMessage(message);
             } else {
                 await response.json();
 
@@ -141,9 +141,8 @@ export default function MoodTracker() {
             }
 
         } catch (error) {
-            const errorMsg = error instanceof Error ? error.message : 'Something went wrong while saving.';
             setSubmitStatus('error');
-            setErrorMessage(`We couldn't save your entry right now. ${errorMsg}`);
+            setErrorMessage(toFriendlyMessage(error, "We couldn't save your entry right now. Please try again."));
         } finally {
             setIsSubmitting(false);
         }
@@ -151,19 +150,14 @@ export default function MoodTracker() {
 
     return (
         <>
-            {/* Page header */}
-            <PageHeader title={<>💭 How are you feeling?</>} subtitle={<>Track your mood and contributing factors</>} size="wide" />
-            {/* Small spacer so content sits comfortably below the full-bleed header on mobile and desktop */}
-            <div className="pt-4 md:pt-6" />
-
-            <PageInset size="wide" className="flex justify-end pb-2">
+            <PageHeader title="💭 How are you feeling?">
                 <Link href="/mood-tracker/history">
-                    <Button variant="outline" size="sm">
+                    <Button variant="ghost" size="sm">
                         <BookOpen className="mr-2 h-4 w-4" />
                         View journal history
                     </Button>
                 </Link>
-            </PageInset>
+            </PageHeader>
 
             {/* split mobile/desktop render into small components */}
             <MoodFormMobile

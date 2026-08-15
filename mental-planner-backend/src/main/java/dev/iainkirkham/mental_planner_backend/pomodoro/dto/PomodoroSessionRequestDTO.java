@@ -38,5 +38,10 @@ public class PomodoroSessionRequestDTO {
      * feeling energized or drained.
      */
     private EnergyRating energyRating;
+
+    /**
+     * Optional id of the task this session was focused on.
+     */
+    private Long taskId;
 }
 

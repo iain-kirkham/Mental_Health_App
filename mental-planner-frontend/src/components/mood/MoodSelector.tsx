@@ -8,31 +8,31 @@ export const MOOD_OPTIONS: MoodOptionType[] = [
 		value: 1,
 		icon: <Frown size={32} strokeWidth={2.5} />,
 		label: "Very Bad",
-		color: "bg-red-100 hover:bg-red-200 border-red-300",
+		color: "bg-destructive/15 hover:bg-destructive/25 border-destructive text-destructive",
 	},
 	{
 		value: 2,
 		icon: <Frown size={32} />,
 		label: "Bad",
-		color: "bg-orange-100 hover:bg-orange-200 border-orange-300",
+		color: "bg-chart-4/15 hover:bg-chart-4/25 border-chart-4 text-chart-4",
 	},
 	{
 		value: 3,
 		icon: <Meh size={32} />,
 		label: "Okay",
-		color: "bg-yellow-100 hover:bg-yellow-200 border-yellow-300",
+		color: "bg-chart-3/15 hover:bg-chart-3/25 border-chart-3 text-chart-3",
 	},
 	{
 		value: 4,
 		icon: <Smile size={32} />,
 		label: "Good",
-		color: "bg-green-100 hover:bg-green-200 border-green-300",
+		color: "bg-chart-2/15 hover:bg-chart-2/25 border-chart-2 text-chart-2",
 	},
 	{
 		value: 5,
 		icon: <Smile size={32} strokeWidth={2.5} />,
 		label: "Very Good",
-		color: "bg-emerald-100 hover:bg-emerald-200 border-emerald-300",
+		color: "bg-chart-5/15 hover:bg-chart-5/25 border-chart-5 text-chart-5",
 	},
 ];
 

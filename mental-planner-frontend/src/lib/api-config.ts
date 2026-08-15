@@ -1,12 +1,14 @@
 // API Configuration
 // Centralized configuration for backend API calls
 
+import { reportFetchOutcome, reportFetchSuccess } from '@/lib/connectivity';
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 export const API_ENDPOINTS = {
   pomodoro: `${API_BASE_URL}/api/pomodoro`,
   mood: `${API_BASE_URL}/api/mood`,
-  jobSearch: `${API_BASE_URL}/api/job-search`,
+  tasks: `${API_BASE_URL}/api/tasks`,
 } as const;
 
 /**
@@ -35,10 +37,17 @@ export async function authenticatedFetch(
     'Content-Type': 'application/json',
   };
 
-  return fetch(url, {
-    ...options,
-    headers,
-  });
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    });
+    reportFetchSuccess();
+    return response;
+  } catch (error) {
+    reportFetchOutcome(API_BASE_URL, error);
+    throw error;
+  }
 }
 
 export default API_BASE_URL;

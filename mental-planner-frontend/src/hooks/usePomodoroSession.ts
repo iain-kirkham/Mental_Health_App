@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { savePomodoroSession as apiSavePomodoroSession } from "@/lib/pomodoro-api";
+import { toFriendlyMessage } from "@/lib/connectivity";
 import type { PomodoroSessionCreationDTO } from "@/types";
 
 export default function usePomodoroSession(getToken: () => Promise<string | null>) {
@@ -18,9 +19,8 @@ export default function usePomodoroSession(getToken: () => Promise<string | null
       setIsSubmitting(false);
       return { ok: true } as const;
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'An unexpected error occurred';
       setSubmitStatus('error');
-      setErrorMessage(errorMsg);
+      setErrorMessage(toFriendlyMessage(error, 'An unexpected error occurred. Please try again.'));
       setIsSubmitting(false);
       return { ok: false, error } as const;
     }
