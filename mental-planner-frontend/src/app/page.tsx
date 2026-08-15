@@ -68,7 +68,6 @@ export default function Home() {
                 </CardContent>
               </Card>
             </Link>
-
           </div>
 
           <div className="mt-12 text-center">
