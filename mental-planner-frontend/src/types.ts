@@ -38,22 +38,6 @@ export interface MoodEntryResponseDTO {
     notes: string;
 }
 
-// Job Search Types
-export type JobApplicationStatus = 'APPLIED' | 'INTERVIEWING' | 'OFFER' | 'REJECTED';
-
-export interface JobApplicationRequestDTO {
-    companyName: string;
-    roleTitle: string;
-    status: JobApplicationStatus;
-}
-
-export interface JobApplicationResponseDTO {
-    id: number;
-    companyName: string;
-    roleTitle: string;
-    status: JobApplicationStatus;
-}
-
 // UI Types
 export interface MoodOption {
     value: number;
