@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Timer, LineChart, Brain, BriefcaseBusiness } from 'lucide-react';
+import { Timer, LineChart, Brain, CalendarDays } from 'lucide-react';
 
 export default function Home() {
   return (
@@ -18,8 +18,25 @@ export default function Home() {
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mt-12">
+            <Link href="/planner">
+              <Card className="hover:border-primary transition-colors cursor-pointer h-full flex flex-col">
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <CalendarDays className="h-6 w-6 text-primary" />
+                    <CardTitle>Planner</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Plan your week with a flexible kanban board. Drag tasks between days and break them into subtasks.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="mt-auto">
+                  <Button variant="outline" className="w-full">Open Planner</Button>
+                </CardContent>
+              </Card>
+            </Link>
+
             <Link href="/pomodoro">
-              <Card className="hover:border-primary transition-colors cursor-pointer h-full">
+              <Card className="hover:border-primary transition-colors cursor-pointer h-full flex flex-col">
                 <CardHeader>
                   <div className="flex items-center gap-2">
                     <Timer className="h-6 w-6 text-primary" />
@@ -29,14 +46,14 @@ export default function Home() {
                     Manage hyperfocus sessions with customizable timers. Track and rate your productivity patterns.
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="mt-auto">
                   <Button variant="outline" className="w-full">Start Timer</Button>
                 </CardContent>
               </Card>
             </Link>
 
             <Link href="/mood-tracker">
-              <Card className="hover:border-primary transition-colors cursor-pointer h-full">
+              <Card className="hover:border-primary transition-colors cursor-pointer h-full flex flex-col">
                 <CardHeader>
                   <div className="flex items-center gap-2">
                     <LineChart className="h-6 w-6 text-primary" />
@@ -46,28 +63,12 @@ export default function Home() {
                     Log daily moods with customizable factors. Identify patterns and triggers over time.
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="mt-auto">
                   <Button variant="outline" className="w-full">Track Mood</Button>
                 </CardContent>
               </Card>
             </Link>
 
-            <Link href="/job-search">
-              <Card className="hover:border-primary transition-colors cursor-pointer h-full">
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <BriefcaseBusiness className="h-6 w-6 text-primary" />
-                    <CardTitle>Job Search Tracker</CardTitle>
-                  </div>
-                  <CardDescription>
-                    Keep a quick table of applications with company names, role titles, and status updates.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button variant="outline" className="w-full">Open Tracker</Button>
-                </CardContent>
-              </Card>
-            </Link>
           </div>
 
           <div className="mt-12 text-center">

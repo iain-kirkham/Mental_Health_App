@@ -74,4 +74,10 @@ public class PomodoroSession {
      */
     @Column(name = "user_id")
     private String userId;
+
+    /**
+     * Optional link to the task this session was focused on.
+     */
+    @Column(name = "task_id")
+    private Long taskId;
 }

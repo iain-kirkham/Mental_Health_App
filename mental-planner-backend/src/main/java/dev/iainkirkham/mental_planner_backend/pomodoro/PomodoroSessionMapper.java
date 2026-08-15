@@ -51,6 +51,7 @@ public class PomodoroSessionMapper {
         dto.setScore(entity.getScore());
         dto.setNotes(entity.getNotes());
         dto.setEnergyRating(entity.getEnergyRating());
+        dto.setTaskId(entity.getTaskId());
 
         return dto;
     }
@@ -89,6 +90,7 @@ public class PomodoroSessionMapper {
         entity.setScore(dto.getScore());
         entity.setNotes(dto.getNotes());
         entity.setEnergyRating(dto.getEnergyRating());
+        entity.setTaskId(dto.getTaskId());
     }
 }
 

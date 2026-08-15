@@ -12,39 +12,62 @@ import {
 import { Button } from '@/components/ui/button'
 import { ModeToggle } from '@/components/mode-toggle'
 import { SignInButton, SignOutButton, useUser } from '@clerk/nextjs'
-import { Timer, LineChart, User, Home as HomeIcon, BriefcaseBusiness, Menu, X } from 'lucide-react'
+import { Timer, LineChart, User, Home as HomeIcon, CalendarDays, Menu, X } from 'lucide-react'
 import React, { useState } from 'react'
 import PageInset from '@/components/PageInset'
 import { usePomodoroSessionContext } from '@/contexts/PomodoroSessionContext'
+import { formatTime } from '@/lib/pomodoro-format'
+
+/**
+ * Live countdown shown beside its nav link. It is the only part of the navbar
+ * subscribed to the timer, so a tick re-renders this span rather than the whole
+ * header (Radix menu, Clerk user area and all).
+ */
+function PomodoroCountdown() {
+    const { isRunning, timeLeft } = usePomodoroSessionContext()
+    if (!isRunning) return null
+    return (
+        <span
+            className="ml-2 rounded-full bg-chart-2/15 text-chart-2 text-xs font-mono font-semibold px-2 py-0.5 tabular-nums"
+            aria-label={`Pomodoro session running, ${formatTime(timeLeft)} remaining`}
+        >
+            {formatTime(timeLeft)}
+        </span>
+    )
+}
+
+/**
+ * Nav links, with an optional badge slot so a route can show live status without
+ * the renderers having to know which href it belongs to.
+ */
+const routes: { href: string; label: string; icon: React.ReactNode; badge?: React.ReactNode }[] = [
+    {
+        href: '/',
+        label: 'Home',
+        icon: <HomeIcon className="mr-2 h-4 w-4" />
+    },
+    {
+        href: '/planner',
+        label: 'Planner',
+        icon: <CalendarDays className="mr-2 h-4 w-4" />
+    },
+    {
+        href: '/pomodoro',
+        label: 'Pomodoro',
+        icon: <Timer className="mr-2 h-4 w-4" />,
+        badge: <PomodoroCountdown />
+    },
+    {
+        href: '/mood-tracker',
+        label: 'Mood Tracker',
+        icon: <LineChart className="mr-2 h-4 w-4" />
+    },
+]
 
 export function Navbar() {
     const { isSignedIn, user } = useUser()
     const pathname = usePathname() || '/'
     const [mobileOpen, setMobileOpen] = useState(false)
-    const { isRunning, timeLeft, formatTime } = usePomodoroSessionContext()
-
-    const routes = [
-        {
-            href: '/',
-            label: 'Home',
-            icon: <HomeIcon className="mr-2 h-4 w-4" />
-        },
-        {
-            href: '/pomodoro',
-            label: 'Pomodoro',
-            icon: <Timer className="mr-2 h-4 w-4" />
-        },
-        {
-            href: '/mood-tracker',
-            label: 'Mood Tracker',
-            icon: <LineChart className="mr-2 h-4 w-4" />
-        },
-        {
-            href: '/job-search',
-            label: 'Job Search',
-            icon: <BriefcaseBusiness className="mr-2 h-4 w-4" />
-        },
-    ]
 
     return (
         <header className="w-full relative bg-background border-b border-border">
@@ -76,14 +99,7 @@ export function Navbar() {
                                                 >
                                                     {route.icon}
                                                     <span className="hidden sm:inline">{route.label}</span>
-                                                    {route.href === '/pomodoro' && isRunning && (
-                                                        <span
-                                                            className="ml-2 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 text-xs font-mono font-semibold px-2 py-0.5 tabular-nums"
-                                                            aria-label={`Pomodoro session running, ${formatTime(timeLeft)} remaining`}
-                                                        >
-                                                            {formatTime(timeLeft)}
-                                                        </span>
-                                                    )}
+                                                    {route.badge}
                                                 </Link>
                                             </NavigationMenuItem>
                                         )
@@ -153,14 +169,7 @@ export function Navbar() {
                                     >
                                         {route.icon}
                                         <span className="ml-1">{route.label}</span>
-                                        {route.href === '/pomodoro' && isRunning && (
-                                            <span
-                                                className="ml-2 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 text-xs font-mono font-semibold px-2 py-0.5 tabular-nums"
-                                                aria-label={`Pomodoro session running, ${formatTime(timeLeft)} remaining`}
-                                            >
-                                                {formatTime(timeLeft)}
-                                            </span>
-                                        )}
+                                        {route.badge}
                                     </Link>
                                 )
                             })}

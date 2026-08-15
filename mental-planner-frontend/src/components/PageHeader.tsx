@@ -1,29 +1,22 @@
-import React from 'react';
-import PageInset from './PageInset';
+import React from 'react'
 
-interface PageHeaderProps {
-  title: React.ReactNode;
-  subtitle?: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl' | 'wide';
-  className?: string;
+type Props = {
+  /** Short page title, rendered as the page's h1. */
+  title: React.ReactNode
+  /** Optional trailing controls (links, buttons) aligned to the right. */
+  children?: React.ReactNode
 }
 
-export default function PageHeader({ title, subtitle, size = 'wide', className = '' }: PageHeaderProps) {
+/**
+ * The thin bar that sits directly under the navbar on every page. Keeping it in
+ * one place means header height, border, and heading typography stay in step
+ * across the app.
+ */
+export default function PageHeader({ title, children }: Props) {
   return (
-    <header className={`w-full ${className}`}>
-      {/* Full-bleed background on mobile; inner content aligned by PageInset */}
-      <div className="w-full bg-primary">
-        <div className="pt-4 pb-6 md:pt-4 md:pb-4">
-          <PageInset size={size}>
-            <div className="w-full text-center">
-              <h1 className="text-2xl md:text-3xl font-bold text-primary-foreground inline-block">{title}</h1>
-              {subtitle && (
-                <p className="text-primary-foreground/90 font-medium mt-1 text-sm md:text-base">{subtitle}</p>
-              )}
-            </div>
-          </PageInset>
-        </div>
-      </div>
-    </header>
-  );
+    <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2 md:px-6">
+      <h1 className="text-sm font-semibold text-foreground">{title}</h1>
+      {children}
+    </div>
+  )
 }

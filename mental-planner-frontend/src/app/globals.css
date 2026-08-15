@@ -39,6 +39,8 @@
     --color-chart-4: hsl(var(--chart-4));
     --color-chart-5: hsl(var(--chart-5));
 
+    --color-overlay0: hsl(var(--overlay0));
+
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
     --radius-sm: calc(var(--radius) - 4px);
@@ -106,6 +108,8 @@
 
         --chart-5: 183 74% 35%;         /* Teal */
 
+        --overlay0: 228 11% 65%;        /* Overlay0 */
+
         --radius: 0.5rem
     }
     .dark {
@@ -158,6 +162,8 @@
         --chart-4: 23 92% 75%;          /* Peach */
 
         --chart-5: 170 57% 73%;         /* Teal */
+
+        --overlay0: 231 11% 47%;        /* Overlay0 */
     }
 }
 
