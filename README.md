@@ -66,9 +66,9 @@ Ensure you have the following installed:
 
 6.  **Access the application:**
     * **Frontend:** `http://localhost:3000`
-    * **Backend API:** `http://localhost:8080` (endpoints under `/api/**`, e.g. `/api/pomodoro`, `/api/mood`, `/api/job-search`)
+    * **Backend API:** `http://localhost:8080` (endpoints under `/api/**`, e.g. `/api/pomodoro`, `/api/mood`)
 
-The application will now be running, and you can interact with the Pomodoro timer, mood tracker, and job search tracker.
+The application will now be running, and you can interact with the Pomodoro timer and mood tracker.
 
 > [!NOTE]
 > `docker-compose.yml` in the repo root builds and runs the **full stack** (database, backend, and frontend) in containers instead — useful for a production-like smoke test: `docker compose up --build`.
@@ -170,7 +170,6 @@ heroku open -a your-backend-app-name
 ### Current Features
 - **🍅 Pomodoro Timer & Session Tracking:** Manage hyperfocus sessions with customizable timers. Rate each session (1-5) to track productivity patterns.
 - **📊 Mood Tracker:** Daily mood logging with customizable factors and notes. Identify patterns and triggers over time.
-- **💼 Job Search Tracker:** Keep a simple table of applications with company name, role title, and current status.
 - **🎨 Clean, Responsive UI:** Built with Next.js and shadcn/ui components for a distraction-free experience.
 - **🔒 User Authentication:** Powered by Clerk for secure, personalized tracking.
 - **🐳 Dockerized:** Easy environment setup with Docker Compose and PostgreSQL.
