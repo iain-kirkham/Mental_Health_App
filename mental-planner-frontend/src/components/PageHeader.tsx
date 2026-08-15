@@ -1,4 +1,5 @@
 import React from 'react'
+import OfflineIndicator from '@/components/OfflineIndicator'
 
 type Props = {
   /** Short page title, rendered as the page's h1. */
@@ -16,7 +17,10 @@ export default function PageHeader({ title, children }: Props) {
   return (
     <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2 md:px-6">
       <h1 className="text-sm font-semibold text-foreground">{title}</h1>
-      {children}
+      <div className="flex items-center gap-3">
+        <OfflineIndicator />
+        {children}
+      </div>
     </div>
   )
 }
