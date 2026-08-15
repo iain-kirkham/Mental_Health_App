@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { ModeToggle } from '@/components/mode-toggle'
 import { SignInButton, SignOutButton, useUser } from '@clerk/nextjs'
-import { Timer, LineChart, User, Home as HomeIcon, BriefcaseBusiness, Menu, X } from 'lucide-react'
+import { Timer, LineChart, User, Home as HomeIcon, Menu, X } from 'lucide-react'
 import React, { useState } from 'react'
 import PageInset from '@/components/PageInset'
 import { usePomodoroSessionContext } from '@/contexts/PomodoroSessionContext'
@@ -38,11 +38,6 @@ export function Navbar() {
             href: '/mood-tracker',
             label: 'Mood Tracker',
             icon: <LineChart className="mr-2 h-4 w-4" />
-        },
-        {
-            href: '/job-search',
-            label: 'Job Search',
-            icon: <BriefcaseBusiness className="mr-2 h-4 w-4" />
         },
     ]
 
