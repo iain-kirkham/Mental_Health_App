@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { getMoodEntries, deleteMoodEntry } from '@/lib/mood-api'
+import { toFriendlyMessage } from '@/lib/connectivity'
 import { formatDateTime } from '@/lib/utils'
 import { MOOD_OPTIONS } from '@/components/mood/MoodSelector'
 import type { MoodEntryResponseDTO } from '@/types'
@@ -32,8 +33,7 @@ export default function MoodHistory() {
         )
         setEntries(sorted)
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unable to load mood entries.'
-        setErrorMessage(message)
+        setErrorMessage(toFriendlyMessage(error, 'Unable to load mood entries.'))
       } finally {
         setIsLoading(false)
       }
@@ -49,8 +49,7 @@ export default function MoodHistory() {
       await deleteMoodEntry(id, getToken)
       setEntries((currentEntries) => currentEntries.filter((entry) => entry.id !== id))
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to delete mood entry.'
-      setErrorMessage(message)
+      setErrorMessage(toFriendlyMessage(error, 'Unable to delete mood entry.'))
     } finally {
       setIsDeletingId(null)
     }

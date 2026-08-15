@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import usePomodoroSession from "@/hooks/usePomodoroSession";
 import type { EnergyRating, PomodoroSessionCreationDTO } from "@/types";
@@ -12,7 +12,6 @@ const minutesToSeconds = (minutes: number) => Math.max(1, Math.floor(minutes)) *
 
 type PersistedState = {
   inputTime: number;
-  totalTime: number;
   endAt: number | null;
   remainingWhenPaused: number;
   sessionStartTime: string | null;
@@ -20,6 +19,7 @@ type PersistedState = {
   score: number;
   notes: string;
   energyRating: EnergyRating | null;
+  linkedTaskId: number | null;
 };
 
 type PomodoroSessionContextValue = {
@@ -30,9 +30,6 @@ type PomodoroSessionContextValue = {
   setInputTime: (minutes: number) => void;
   startPause: () => void;
   reset: () => void;
-  formatTime: (seconds: number) => string;
-  getColorClass: () => string;
-  sessionStartTime: Date | null;
   showAlert: boolean;
   showSessionForm: boolean;
   setShowSessionForm: (v: boolean) => void;
@@ -42,6 +39,8 @@ type PomodoroSessionContextValue = {
   setNotes: (s: string) => void;
   energyRating: EnergyRating | null;
   setEnergyRating: (r: EnergyRating | null) => void;
+  linkedTaskId: number | null;
+  setLinkedTaskId: (id: number | null) => void;
   isSubmitting: boolean;
   submitStatus: "idle" | "success" | "error";
   errorMessage: string;
@@ -63,7 +62,6 @@ export function PomodoroSessionProvider({ children }: { children: React.ReactNod
   const { isSubmitting, submitStatus, errorMessage, saveSession, setSubmitStatus } = usePomodoroSession(getToken);
 
   const [inputTime, setInputTimeState] = useState<number>(DEFAULT_MINUTES);
-  const [totalTime, setTotalTime] = useState<number>(minutesToSeconds(DEFAULT_MINUTES));
   const [endAt, setEndAt] = useState<number | null>(null);
   const [remainingWhenPaused, setRemainingWhenPaused] = useState<number>(minutesToSeconds(DEFAULT_MINUTES));
   const [timeLeft, setTimeLeft] = useState<number>(minutesToSeconds(DEFAULT_MINUTES));
@@ -73,11 +71,15 @@ export function PomodoroSessionProvider({ children }: { children: React.ReactNod
   const [score, setScore] = useState(3);
   const [notes, setNotes] = useState("");
   const [energyRating, setEnergyRating] = useState<EnergyRating | null>(null);
+  const [linkedTaskId, setLinkedTaskId] = useState<number | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
   const expiredRef = useRef(false);
   const statusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // The configured duration is always exactly the input, so it is derived rather
+  // than tracked as a second copy that has to be updated in lockstep.
+  const totalTime = minutesToSeconds(inputTime);
   const isRunning = endAt !== null && timeLeft > 0;
 
   // Restore an in-progress session (e.g. after a page refresh) on mount. This has to run
@@ -92,7 +94,6 @@ export function PomodoroSessionProvider({ children }: { children: React.ReactNod
         const parsed: PersistedState = JSON.parse(raw);
         const restoredTimeLeft = computeRemaining(parsed.endAt, parsed.remainingWhenPaused);
         setInputTimeState(parsed.inputTime);
-        setTotalTime(parsed.totalTime);
         setEndAt(parsed.endAt);
         setRemainingWhenPaused(parsed.remainingWhenPaused);
         setSessionStartTime(parsed.sessionStartTime ? new Date(parsed.sessionStartTime) : null);
@@ -100,6 +101,7 @@ export function PomodoroSessionProvider({ children }: { children: React.ReactNod
         setScore(parsed.score);
         setNotes(parsed.notes);
         setEnergyRating(parsed.energyRating);
+        setLinkedTaskId(parsed.linkedTaskId ?? null);
         setTimeLeft(restoredTimeLeft);
         if (parsed.endAt !== null && restoredTimeLeft === 0) {
           expiredRef.current = true;
@@ -116,7 +118,6 @@ export function PomodoroSessionProvider({ children }: { children: React.ReactNod
     if (!hydrated) return;
     const state: PersistedState = {
       inputTime,
-      totalTime,
       endAt,
       remainingWhenPaused,
       sessionStartTime: sessionStartTime ? sessionStartTime.toISOString() : null,
@@ -124,9 +125,10 @@ export function PomodoroSessionProvider({ children }: { children: React.ReactNod
       score,
       notes,
       energyRating,
+      linkedTaskId,
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [hydrated, inputTime, totalTime, endAt, remainingWhenPaused, sessionStartTime, showSessionForm, score, notes, energyRating]);
+  }, [hydrated, inputTime, endAt, remainingWhenPaused, sessionStartTime, showSessionForm, score, notes, energyRating, linkedTaskId]);
 
   useEffect(() => {
     if (!isRunning) return;
@@ -175,9 +177,9 @@ export function PomodoroSessionProvider({ children }: { children: React.ReactNod
     setEndAt(null);
     setRemainingWhenPaused(seconds);
     setTimeLeft(seconds);
-    setTotalTime(seconds);
     setSessionStartTime(null);
     setShowAlert(false);
+    setLinkedTaskId(null);
     expiredRef.current = false;
   }, [inputTime]);
 
@@ -185,23 +187,9 @@ export function PomodoroSessionProvider({ children }: { children: React.ReactNod
     if (isNaN(minutes) || minutes <= 0) return;
     setInputTimeState(minutes);
     const seconds = minutesToSeconds(minutes);
-    setTotalTime(seconds);
     setRemainingWhenPaused(seconds);
     setTimeLeft(seconds);
   }, []);
-
-  const formatTime = useCallback((seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-  }, []);
-
-  const getColorClass = useCallback(() => {
-    const percentRemaining = totalTime > 0 ? timeLeft / totalTime : 0;
-    if (percentRemaining > 0.66) return "text-green-500 dark:text-green-400";
-    if (percentRemaining > 0.33) return "text-amber-500 dark:text-amber-400";
-    return "text-red-500 dark:text-red-400";
-  }, [timeLeft, totalTime]);
 
   useEffect(() => {
     return () => {
@@ -217,6 +205,7 @@ export function PomodoroSessionProvider({ children }: { children: React.ReactNod
       score,
       notes: notes.trim(),
       energyRating,
+      taskId: linkedTaskId,
     };
 
     const result = await saveSession(sessionData);
@@ -226,38 +215,62 @@ export function PomodoroSessionProvider({ children }: { children: React.ReactNod
       setScore(3);
       setNotes("");
       setEnergyRating(null);
-      setInputTime(inputTime);
+      // The saved session is over: put the clock back to the configured duration
+      // and clear the session-scoped state so the next run starts fresh.
+      reset();
 
       if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current);
       statusTimeoutRef.current = setTimeout(() => setSubmitStatus("idle"), 3000);
     }
-  }, [sessionStartTime, totalTime, timeLeft, score, notes, energyRating, saveSession, inputTime, setInputTime, setSubmitStatus]);
+  }, [sessionStartTime, totalTime, timeLeft, score, notes, energyRating, linkedTaskId, saveSession, reset, setSubmitStatus]);
 
-  const value: PomodoroSessionContextValue = {
-    timeLeft,
-    totalTime,
-    isRunning,
-    inputTime,
-    setInputTime,
-    startPause,
-    reset,
-    formatTime,
-    getColorClass,
-    sessionStartTime,
-    showAlert,
-    showSessionForm,
-    setShowSessionForm,
-    score,
-    setScore,
-    notes,
-    setNotes,
-    energyRating,
-    setEnergyRating,
-    isSubmitting,
-    submitStatus,
-    errorMessage,
-    handleSaveSession,
-  };
+  // Memoised so a tick (or a keystroke in the summary form) doesn't hand every
+  // consumer — the navbar included — a brand-new object each second.
+  const value = useMemo<PomodoroSessionContextValue>(
+    () => ({
+      timeLeft,
+      totalTime,
+      isRunning,
+      inputTime,
+      setInputTime,
+      startPause,
+      reset,
+      showAlert,
+      showSessionForm,
+      setShowSessionForm,
+      score,
+      setScore,
+      notes,
+      setNotes,
+      energyRating,
+      setEnergyRating,
+      linkedTaskId,
+      setLinkedTaskId,
+      isSubmitting,
+      submitStatus,
+      errorMessage,
+      handleSaveSession,
+    }),
+    [
+      timeLeft,
+      totalTime,
+      isRunning,
+      inputTime,
+      setInputTime,
+      startPause,
+      reset,
+      showAlert,
+      showSessionForm,
+      score,
+      notes,
+      energyRating,
+      linkedTaskId,
+      isSubmitting,
+      submitStatus,
+      errorMessage,
+      handleSaveSession,
+    ],
+  );
 
   return <PomodoroSessionContext.Provider value={value}>{children}</PomodoroSessionContext.Provider>;
 }

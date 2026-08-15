@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import React from "react";
+import { Toaster } from "sonner";
 import {
   ClerkProvider
 } from '@clerk/nextjs'
@@ -10,6 +11,8 @@ import { Navbar } from '@/components/Navbar'
 import { ThemeProvider } from '@/components/theme-provider'
 import { PomodoroSessionProvider } from '@/contexts/PomodoroSessionContext'
 import { GlobalPomodoroModal } from '@/components/GlobalPomodoroModal'
+import { TimerStoreBridge } from '@/components/TimerStoreBridge'
+import { QueryProvider } from '@/components/QueryProvider'
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -39,13 +42,17 @@ export default function RootLayout({
       >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <ClerkProvider>
-            <PomodoroSessionProvider>
-              <Navbar />
-              {children}
-              <GlobalPomodoroModal />
-            </PomodoroSessionProvider>
+            <QueryProvider>
+              <PomodoroSessionProvider>
+                <TimerStoreBridge />
+                <Navbar />
+                {children}
+                <GlobalPomodoroModal />
+              </PomodoroSessionProvider>
+            </QueryProvider>
           </ClerkProvider>
         </ThemeProvider>
+        <Toaster richColors closeButton />
       </body>
     </html>
   );

@@ -1,9 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle2, AlertCircle } from "lucide-react";
-import PageInset from "@/components/PageInset";
+import StatusAlerts from "@/components/StatusAlerts";
 import MoodSelector from "@/components/mood/MoodSelector";
 import DateTimePickers from "@/components/mood/DateTimePickers";
 import FactorsSection from "@/components/mood/FactorsSection";
@@ -34,38 +32,25 @@ type Props = {
 
 export default function MoodFormDesktop({ submitStatus, errorMessage, isSubmitting, selectedMood, setSelectedMood, formErrors, date, setDate, time, setTime, factors, setFactors, newFactor, setNewFactor, showFactorInput, setShowFactorInput, notes, setNotes, handleSubmit, formatDate, }: Props) {
   return (
-    <div className="hidden md:block w-full">
-      <PageInset size="wide">
-        {submitStatus === 'success' && (
-          <Alert className="mb-6 bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-900 animate-in slide-in-from-top duration-300">
-            <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
-            <AlertDescription className="text-green-800 dark:text-green-300 font-medium">🎉 Mood entry saved successfully!</AlertDescription>
-          </Alert>
-        )}
+    <div className="hidden md:block w-full px-3 py-3 md:px-4">
+        <StatusAlerts
+          submitStatus={submitStatus}
+          errorMessage={errorMessage}
+          className="mb-6"
+          successMessage="🎉 Mood entry saved successfully!"
+          errorFallback="We couldn't save your mood entry — please try again."
+          errorAction={<Button size="sm" variant="outline" onClick={handleSubmit} disabled={isSubmitting} aria-label="Retry save">Try again</Button>}
+        />
 
-        {submitStatus === 'error' && (
-          <Alert variant="destructive" className="mb-6 animate-in slide-in-from-top duration-300">
-            <div className="flex items-start justify-between w-full gap-4">
-              <div className="flex items-center gap-3">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription className="font-medium">{errorMessage || "We couldn't save your mood entry — please try again."}</AlertDescription>
-              </div>
-              <div className="flex-shrink-0">
-                <Button size="sm" variant="outline" onClick={handleSubmit} disabled={isSubmitting} aria-label="Retry save">Try again</Button>
-              </div>
-            </div>
-          </Alert>
-        )}
-
-        <div className="grid grid-cols-12 gap-6">
-          <div className="col-span-7 space-y-6">
-            <div className="p-6 rounded-md border border-border bg-card">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+          <div className="space-y-6">
+            <div className="border-b border-border pb-6">
               <h3 className="text-sm font-semibold text-foreground mb-4">Select your mood</h3>
               <MoodSelector selectedMood={selectedMood} setSelectedMood={setSelectedMood} isSubmitting={isSubmitting} />
               {formErrors.mood && (<p className={`text-sm mt-2 ${submitStatus === 'error' ? 'text-destructive' : 'text-muted-foreground'}`}>{formErrors.mood}</p>)}
             </div>
 
-            <div className="p-6 rounded-md border border-border bg-card">
+            <div className="border-b border-border pb-6">
               <h3 className="text-sm font-semibold text-foreground mb-4">📅 When</h3>
               <DateTimePickers date={date} setDate={setDate} time={time} setTime={setTime} isSubmitting={isSubmitting} formatDate={formatDate} />
               {(formErrors.date || formErrors.time) && (
@@ -79,13 +64,12 @@ export default function MoodFormDesktop({ submitStatus, errorMessage, isSubmitti
             <FactorsSection factors={factors} setFactors={setFactors} newFactor={newFactor} setNewFactor={setNewFactor} showFactorInput={showFactorInput} setShowFactorInput={setShowFactorInput} isSubmitting={isSubmitting} formErrors={{ newFactor: formErrors.newFactor }} />
           </div>
 
-          <div className="col-span-5 p-6 rounded-md border border-border bg-card flex flex-col">
+          <div className="lg:border-l border-border lg:pl-6 flex flex-col h-full">
             <label className="text-sm font-semibold text-foreground mb-3 block">📝 Notes</label>
-            <Textarea placeholder="How are you feeling? What happened today?" value={notes} onChange={(e) => setNotes(e.target.value)} className="mt-1 min-h-[360px] border-2 focus:border-ring transition-colors resize-none flex-1" disabled={isSubmitting} aria-label="Mood notes" />
+            <Textarea placeholder="How are you feeling? What happened today?" value={notes} onChange={(e) => setNotes(e.target.value)} className="mt-1 min-h-[240px] border-2 focus:border-ring transition-colors resize-none flex-1" disabled={isSubmitting} aria-label="Mood notes" />
             <Button className="mt-4 h-12 text-lg font-semibold hover:opacity-95 transition-all duration-200 disabled:opacity-50" onClick={handleSubmit} disabled={selectedMood === null || isSubmitting} aria-label="Save mood entry">{isSubmitting ? (<><span className="animate-spin mr-2">⏳</span>Saving...</>) : (<><span className="mr-2">💾</span>Save Mood Entry</>)}</Button>
           </div>
         </div>
-      </PageInset>
     </div>
   );
 }

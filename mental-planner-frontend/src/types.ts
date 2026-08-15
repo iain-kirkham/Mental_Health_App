@@ -10,6 +10,7 @@ export interface PomodoroSessionCreationDTO {
     score: number;
     notes: string;
     energyRating: EnergyRating | null;
+    taskId: number | null;
 }
 
 export interface PomodoroSessionResponseDTO {
@@ -20,6 +21,47 @@ export interface PomodoroSessionResponseDTO {
     score: number;
     notes: string;
     energyRating: EnergyRating | null;
+    taskId: number | null;
+}
+
+// Task Types (daily planner)
+export type TaskPriority = 'URGENT' | 'HIGH' | 'NORMAL' | 'LOW';
+
+export interface TaskRequestDTO {
+    title: string;
+    description: string | null;
+    scheduledDate: string; // "YYYY-MM-DD"
+    startTime: string | null; // ISO instant
+    endTime: string | null; // ISO instant
+    completed: boolean;
+    sortOrder: number;
+    plannedMinutes: number | null;
+    actualMinutes: number;
+    category: string | null;
+    archived: boolean;
+    priority: TaskPriority;
+}
+
+export interface TaskResponseDTO extends TaskRequestDTO {
+    id: number;
+    subtasks: SubtaskResponseDTO[];
+}
+
+export interface TaskReorderItemDTO {
+    id: number;
+    sortOrder: number;
+}
+
+export interface SubtaskRequestDTO {
+    title: string;
+    completed: boolean;
+    sortOrder: number;
+    plannedMinutes: number | null;
+}
+
+export interface SubtaskResponseDTO extends SubtaskRequestDTO {
+    id: number;
+    taskId: number;
 }
 
 // Mood Entry Types

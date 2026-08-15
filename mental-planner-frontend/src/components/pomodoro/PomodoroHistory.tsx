@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { getPomodoroSessions, deletePomodoroSession } from '@/lib/pomodoro-api'
+import { toFriendlyMessage } from '@/lib/connectivity'
 import { getScoreEmoji, getEnergyRatingOption } from '@/lib/pomodoro-format'
 import { formatDateTime } from '@/lib/utils'
 import type { PomodoroSessionResponseDTO } from '@/types'
@@ -39,8 +40,7 @@ export default function PomodoroHistory() {
                 )
                 setSessions(sorted)
             } catch (error) {
-                const message = error instanceof Error ? error.message : 'Unable to load pomodoro sessions.'
-                setErrorMessage(message)
+                setErrorMessage(toFriendlyMessage(error, 'Unable to load pomodoro sessions.'))
             } finally {
                 setIsLoading(false)
             }
@@ -56,8 +56,7 @@ export default function PomodoroHistory() {
             await deletePomodoroSession(id, getToken)
             setSessions((currentSessions) => currentSessions.filter((session) => session.id !== id))
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'Unable to delete pomodoro session.'
-            setErrorMessage(message)
+            setErrorMessage(toFriendlyMessage(error, 'Unable to delete pomodoro session.'))
         } finally {
             setIsDeletingId(null)
         }
@@ -73,7 +72,7 @@ export default function PomodoroHistory() {
             </CardHeader>
             <CardContent className="space-y-4">
                 {errorMessage ? (
-                    <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-200">
+                    <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                         {errorMessage}
                     </p>
                 ) : null}
