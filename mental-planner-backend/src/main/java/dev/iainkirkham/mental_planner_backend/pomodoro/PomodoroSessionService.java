@@ -1,11 +1,9 @@
 package dev.iainkirkham.mental_planner_backend.pomodoro;
 
 import dev.iainkirkham.mental_planner_backend.config.AuthenticationContext;
-import dev.iainkirkham.mental_planner_backend.config.OwnedEntityLookup;
 import dev.iainkirkham.mental_planner_backend.exception.ResourceNotFoundException;
 import dev.iainkirkham.mental_planner_backend.pomodoro.dto.PomodoroSessionRequestDTO;
 import dev.iainkirkham.mental_planner_backend.pomodoro.dto.PomodoroSessionResponseDTO;
-import dev.iainkirkham.mental_planner_backend.tasks.TaskService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,31 +21,14 @@ public class PomodoroSessionService {
 
     private final PomodoroSessionRepository pomodoroSessionRepository;
     private final AuthenticationContext authenticationContext;
-    private final OwnedEntityLookup ownedEntityLookup;
     private final PomodoroSessionMapper pomodoroSessionMapper;
-    private final TaskService taskService;
 
     public PomodoroSessionService(PomodoroSessionRepository pomodoroSessionRepository,
                                  AuthenticationContext authenticationContext,
-                                 OwnedEntityLookup ownedEntityLookup,
-                                 PomodoroSessionMapper pomodoroSessionMapper,
-                                 TaskService taskService) {
+                                 PomodoroSessionMapper pomodoroSessionMapper) {
         this.pomodoroSessionRepository = pomodoroSessionRepository;
         this.authenticationContext = authenticationContext;
-        this.ownedEntityLookup = ownedEntityLookup;
         this.pomodoroSessionMapper = pomodoroSessionMapper;
-        this.taskService = taskService;
-    }
-
-    /**
-     * Verifies a session's linked task (if any) belongs to the authenticated user.
-     *
-     * @throws ResourceNotFoundException if taskId is set but doesn't belong to the user.
-     */
-    private void assertTaskOwnedIfPresent(PomodoroSessionRequestDTO requestDTO) {
-        if (requestDTO.getTaskId() != null) {
-            taskService.assertOwnedByCurrentUser(requestDTO.getTaskId());
-        }
     }
 
     /**
@@ -58,7 +39,6 @@ public class PomodoroSessionService {
      */
     @Transactional
     public PomodoroSessionResponseDTO createPomodoroSession(PomodoroSessionRequestDTO requestDTO) {
-        assertTaskOwnedIfPresent(requestDTO);
         PomodoroSession pomodoroSession = pomodoroSessionMapper.toEntity(requestDTO);
         pomodoroSession.setId(null); // Ensure ID is null for new entries
         // Automatically set userId from authenticated user
@@ -101,15 +81,10 @@ public class PomodoroSessionService {
      * @throws ResourceNotFoundException if the session doesn't exist or doesn't belong to the user.
      */
     public PomodoroSessionResponseDTO getPomodoroSessionById(Long id) {
-        PomodoroSession session = findOwnedSession(id);
+        String userId = authenticationContext.getCurrentUserId();
+        PomodoroSession session = pomodoroSessionRepository.findByIdAndUserId(id, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("PomodoroSession not found with ID: " + id));
         return pomodoroSessionMapper.toResponseDTO(session);
-    }
-
-    /**
-     * Looks up a Pomodoro session by ID, verifying it belongs to the authenticated user.
-     */
-    private PomodoroSession findOwnedSession(Long id) {
-        return ownedEntityLookup.findOwnedOrThrow(pomodoroSessionRepository::findByIdAndUserId, id, "PomodoroSession");
     }
 
     /**
@@ -122,9 +97,9 @@ public class PomodoroSessionService {
      */
     @Transactional
     public PomodoroSessionResponseDTO updatePomodoroSession(Long id, PomodoroSessionRequestDTO requestDTO) {
-        assertTaskOwnedIfPresent(requestDTO);
-
-        PomodoroSession existingPomodoroSession = findOwnedSession(id);
+        String userId = authenticationContext.getCurrentUserId();
+        PomodoroSession existingPomodoroSession = pomodoroSessionRepository.findByIdAndUserId(id, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("PomodoroSession not found with ID: " + id));
 
         pomodoroSessionMapper.updateEntityFromDTO(existingPomodoroSession, requestDTO);
 
@@ -140,6 +115,9 @@ public class PomodoroSessionService {
      */
     @Transactional
     public void deletePomodoroSession(Long id) {
-        pomodoroSessionRepository.delete(findOwnedSession(id));
+        String userId = authenticationContext.getCurrentUserId();
+        PomodoroSession session = pomodoroSessionRepository.findByIdAndUserId(id, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("PomodoroSession not found with ID: " + id));
+        pomodoroSessionRepository.delete(session);
     }
 }
