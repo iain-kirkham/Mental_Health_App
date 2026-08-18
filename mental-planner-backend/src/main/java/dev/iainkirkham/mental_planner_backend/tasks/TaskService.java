@@ -69,6 +69,13 @@ public class TaskService {
     }
 
     /**
+     * Attaches a single task's subtasks (fresh-fetched) onto its response DTO.
+     */
+    private TaskResponseDTO withSubtasks(Task task) {
+        return withSubtasks(List.of(task)).get(0);
+    }
+
+    /**
      * Creates a new task for the authenticated user.
      *
      * @param requestDTO The task DTO to create.
@@ -162,9 +169,7 @@ public class TaskService {
         taskMapper.updateEntityFromDTO(existingTask, requestDTO);
 
         Task updatedTask = taskRepository.save(existingTask);
-        TaskResponseDTO dto = taskMapper.toResponseDTO(updatedTask);
-        dto.setSubtasks(subtaskMapper.toResponseDTOList(subtaskRepository.findByTaskIdOrderBySortOrderAsc(id)));
-        return dto;
+        return withSubtasks(updatedTask);
     }
 
     /**
@@ -179,9 +184,7 @@ public class TaskService {
         Task task = findOwnedTask(id);
         task.setArchived(true);
         Task saved = taskRepository.save(task);
-        TaskResponseDTO dto = taskMapper.toResponseDTO(saved);
-        dto.setSubtasks(subtaskMapper.toResponseDTOList(subtaskRepository.findByTaskIdOrderBySortOrderAsc(id)));
-        return dto;
+        return withSubtasks(saved);
     }
 
     /**
@@ -199,9 +202,7 @@ public class TaskService {
         Task task = findOwnedTask(id);
         task.setActualMinutes(requestDTO.getActualMinutes());
         Task saved = taskRepository.save(task);
-        TaskResponseDTO dto = taskMapper.toResponseDTO(saved);
-        dto.setSubtasks(subtaskMapper.toResponseDTOList(subtaskRepository.findByTaskIdOrderBySortOrderAsc(id)));
-        return dto;
+        return withSubtasks(saved);
     }
 
     /**
