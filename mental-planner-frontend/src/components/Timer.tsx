@@ -34,7 +34,7 @@ export default function Timer() {
     const [selectedTaskId, setSelectedTaskId] = React.useState<number | null>(null);
 
     const todayKey = format(new Date(), "yyyy-MM-dd");
-    const { data: todaysTasks = [] } = useQuery({
+    const { data: todaysTasks = [], isLoading: isLoadingTasks } = useQuery({
         queryKey: ["tasks", todayKey],
         queryFn: () => getTasksForDate(todayKey, getToken),
     });
@@ -107,6 +107,7 @@ export default function Timer() {
                             selectedTaskId={hasCountdownProgress ? activeTaskId : selectedTaskId}
                             onChange={setSelectedTaskId}
                             disabled={hasCountdownProgress}
+                            isLoading={isLoadingTasks}
                         />
                         <TimerControls
                             isRunning={isRunning}
@@ -145,6 +146,7 @@ export default function Timer() {
                                 selectedTaskId={hasCountdownProgress ? activeTaskId : selectedTaskId}
                                 onChange={setSelectedTaskId}
                                 disabled={hasCountdownProgress}
+                                isLoading={isLoadingTasks}
                             />
                             <TimerControls
                                 isRunning={isRunning}
@@ -167,11 +169,13 @@ function TaskLinkPicker({
     selectedTaskId,
     onChange,
     disabled,
+    isLoading,
 }: {
     tasks: { id: number; title: string }[];
     selectedTaskId: number | null;
     onChange: (id: number | null) => void;
     disabled: boolean;
+    isLoading?: boolean;
 }) {
     return (
         <div>
@@ -182,16 +186,22 @@ function TaskLinkPicker({
                 id="pomodoro-task-link"
                 value={selectedTaskId ?? ""}
                 onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
-                disabled={disabled}
+                disabled={disabled || isLoading}
                 className="w-full h-10 rounded-md border-2 border-input bg-transparent px-3 text-sm shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label="Link this session to a task"
             >
-                <option value="">No task - just focus</option>
-                {tasks.map((task) => (
-                    <option key={task.id} value={task.id}>
-                        {task.title || "Untitled task"}
-                    </option>
-                ))}
+                {isLoading ? (
+                    <option value="">Loading today&apos;s tasks…</option>
+                ) : (
+                    <>
+                        <option value="">No task - just focus</option>
+                        {tasks.map((task) => (
+                            <option key={task.id} value={task.id}>
+                                {task.title || "Untitled task"}
+                            </option>
+                        ))}
+                    </>
+                )}
             </select>
             {disabled && (
                 <p className="text-xs text-muted-foreground mt-2">
