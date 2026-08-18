@@ -9,8 +9,7 @@ import { API_ENDPOINTS, authenticatedFetch } from "@/lib/api-config";
 import { toFriendlyMessage } from "@/lib/connectivity";
 import type { MoodEntryCreationDTO } from "@/types";
 import type { FormErrors } from "@/components/mood/types";
-import MoodFormMobile from "@/components/mood/MoodFormMobile";
-import MoodFormDesktop from "@/components/mood/MoodFormDesktop";
+import MoodForm from "@/components/mood/MoodForm";
 import PageHeader from "@/components/PageHeader";
 
 /** Maximum length for a custom factor name. */
@@ -159,31 +158,7 @@ export default function MoodTracker() {
                 </Link>
             </PageHeader>
 
-            {/* split mobile/desktop render into small components */}
-            <MoodFormMobile
-                submitStatus={submitStatus}
-                errorMessage={errorMessage}
-                isSubmitting={isSubmitting}
-                selectedMood={selectedMood}
-                setSelectedMood={setSelectedMood}
-                formErrors={formErrors}
-                date={date}
-                setDate={setDate}
-                time={time}
-                setTime={setTime}
-                factors={factors}
-                setFactors={setFactors}
-                newFactor={newFactor}
-                setNewFactor={setNewFactor}
-                showFactorInput={showFactorInput}
-                setShowFactorInput={setShowFactorInput}
-                notes={notes}
-                setNotes={setNotes}
-                handleSubmit={handleSubmit}
-                formatDate={formatDate}
-            />
-
-            <MoodFormDesktop
+            <MoodForm
                 submitStatus={submitStatus}
                 errorMessage={errorMessage}
                 isSubmitting={isSubmitting}
