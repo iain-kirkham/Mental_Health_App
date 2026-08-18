@@ -11,21 +11,29 @@ import {
 } from '@/components/ui/navigation-menu'
 import { Button } from '@/components/ui/button'
 import { ModeToggle } from '@/components/mode-toggle'
-import { SignInButton, SignOutButton, useUser } from '@clerk/nextjs'
+import { SignInButton, useClerk, useUser } from '@clerk/nextjs'
 import { Timer, LineChart, User, Home as HomeIcon, CalendarDays, Menu, X } from 'lucide-react'
 import React, { useState } from 'react'
 import PageInset from '@/components/PageInset'
-import { usePomodoroSessionContext } from '@/contexts/PomodoroSessionContext'
+import { useTimerStore } from '@/store/timerStore'
 import { formatTime } from '@/lib/pomodoro-format'
+import { useQueryClient } from '@tanstack/react-query'
 
 /**
  * Live countdown shown beside its nav link. It is the only part of the navbar
  * subscribed to the timer, so a tick re-renders this span rather than the whole
- * header (Radix menu, Clerk user area and all).
+ * header (Radix menu, Clerk user area and all). Scoped to countdown mode only -
+ * a plain task stopwatch running elsewhere shouldn't surface a Pomodoro badge here.
  */
 function PomodoroCountdown() {
-    const { isRunning, timeLeft } = usePomodoroSessionContext()
-    if (!isRunning) return null
+    const mode = useTimerStore((state) => state.mode)
+    const isRunning = useTimerStore((state) => state.isRunning)
+    const elapsedSeconds = useTimerStore((state) => state.elapsedSeconds)
+    const sessionLengthMinutes = useTimerStore((state) => state.sessionLengthMinutes)
+
+    if (mode !== 'countdown' || !isRunning || sessionLengthMinutes === null) return null
+    const timeLeft = Math.max(0, sessionLengthMinutes * 60 - elapsedSeconds)
+
     return (
         <span
             className="ml-2 rounded-full bg-chart-2/15 text-chart-2 text-xs font-mono font-semibold px-2 py-0.5 tabular-nums"
@@ -66,8 +74,20 @@ const routes: { href: string; label: string; icon: React.ReactNode; badge?: Reac
 
 export function Navbar() {
     const { isSignedIn, user } = useUser()
+    const { signOut } = useClerk()
+    const queryClient = useQueryClient()
     const pathname = usePathname() || '/'
     const [mobileOpen, setMobileOpen] = useState(false)
+
+    // Task data is cached to localStorage (see QueryProvider) so it survives reloads while
+    // offline. That cache isn't scoped per-user, so it must be wiped on sign-out - otherwise
+    // the next person to use this browser/profile could read the previous user's tasks.
+    const handleSignOut = () => {
+        void signOut(() => {
+            queryClient.clear()
+            window.localStorage.removeItem('mha-query-cache')
+        })
+    }
 
     return (
         <header className="w-full relative bg-background border-b border-border">
@@ -117,11 +137,9 @@ export function Navbar() {
                                         <User className="h-4 w-4 opacity-90" />
                                         <span>{user?.firstName || user?.primaryEmailAddress?.emailAddress?.split('@')[0]}</span>
                                     </div>
-                                    <SignOutButton>
-                                        <Button variant="outline" size="sm">
-                                            Sign Out
-                                        </Button>
-                                    </SignOutButton>
+                                    <Button variant="outline" size="sm" onClick={handleSignOut}>
+                                        Sign Out
+                                    </Button>
                                 </>
                             ) : (
                                 <SignInButton>
@@ -181,11 +199,9 @@ export function Navbar() {
                                             <User className="h-4 w-4 opacity-90" />
                                             <span>{user?.firstName || user?.primaryEmailAddress?.emailAddress?.split('@')[0]}</span>
                                         </div>
-                                        <SignOutButton>
-                                            <Button variant="outline" size="sm">
-                                                Sign Out
-                                            </Button>
-                                        </SignOutButton>
+                                        <Button variant="outline" size="sm" onClick={handleSignOut}>
+                                            Sign Out
+                                        </Button>
                                     </div>
                                 ) : (
                                     <SignInButton>

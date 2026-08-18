@@ -37,5 +37,11 @@ export function TimerStoreBridge() {
     useTimerStore.getState().setPersistFn(persist)
   }, [persist])
 
+  // localStorage isn't available during SSR, so the store is created with hydration skipped
+  // (see timerStore.ts) and rehydrated here instead, once mounted client-side.
+  useEffect(() => {
+    void useTimerStore.persist.rehydrate()
+  }, [])
+
   return null
 }
