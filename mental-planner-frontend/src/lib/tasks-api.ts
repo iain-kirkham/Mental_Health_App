@@ -5,6 +5,8 @@ import type {
   TaskReorderItemDTO,
   TaskRequestDTO,
   TaskResponseDTO,
+  TaskTimeEntryRequestDTO,
+  TaskTimeEntryResponseDTO,
 } from "@/types";
 
 export async function getTasksForDate(
@@ -219,5 +221,62 @@ export async function deleteSubtask(
 
   if (!response.ok) {
     throw new Error(`Failed to delete subtask (${response.status})`);
+  }
+}
+
+export async function getTaskTimeEntries(
+  taskId: number,
+  getToken: () => Promise<string | null>
+): Promise<TaskTimeEntryResponseDTO[]> {
+  const response = await authenticatedFetch(
+    `${API_ENDPOINTS.tasks}/${taskId}/time-entries`,
+    { method: 'GET' },
+    getToken
+  );
+
+  if (response.status === 204) {
+    return [];
+  }
+
+  if (!response.ok) {
+    throw new Error(`Failed to load time entries (${response.status})`);
+  }
+
+  return (await response.json()) as TaskTimeEntryResponseDTO[];
+}
+
+export async function logTaskTimeEntry(
+  taskId: number,
+  entry: TaskTimeEntryRequestDTO,
+  getToken: () => Promise<string | null>
+): Promise<TaskTimeEntryResponseDTO> {
+  const response = await authenticatedFetch(
+    `${API_ENDPOINTS.tasks}/${taskId}/time-entries`,
+    { method: 'POST', body: JSON.stringify(entry) },
+    getToken
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const message = errorData.message || `Failed to log time entry (${response.status})`;
+    throw new Error(message);
+  }
+
+  return (await response.json()) as TaskTimeEntryResponseDTO;
+}
+
+export async function deleteTaskTimeEntry(
+  taskId: number,
+  entryId: number,
+  getToken: () => Promise<string | null>
+): Promise<void> {
+  const response = await authenticatedFetch(
+    `${API_ENDPOINTS.tasks}/${taskId}/time-entries/${entryId}`,
+    { method: 'DELETE' },
+    getToken
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to delete time entry (${response.status})`);
   }
 }
