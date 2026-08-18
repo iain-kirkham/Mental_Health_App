@@ -292,9 +292,19 @@ public class TaskService {
      */
     @Transactional
     public List<TaskResponseDTO> reorderTasks(List<TaskReorderItemDTO> items) {
+        List<Long> requestedIds = items.stream().map(TaskReorderItemDTO::getId).distinct().toList();
+        String userId = authenticationContext.getCurrentUserId();
+        Map<Long, Task> ownedTasksById = taskRepository.findByIdInAndUserId(requestedIds, userId).stream()
+                .collect(Collectors.toMap(Task::getId, task -> task));
+
+        if (ownedTasksById.size() < requestedIds.size()) {
+            List<Long> missingIds = requestedIds.stream().filter(id -> !ownedTasksById.containsKey(id)).toList();
+            throw new ResourceNotFoundException("Task(s) not found with ID(s): " + missingIds);
+        }
+
         List<Task> updatedTasks = items.stream()
                 .map(item -> {
-                    Task task = findOwnedTask(item.getId());
+                    Task task = ownedTasksById.get(item.getId());
                     task.setSortOrder(item.getSortOrder());
                     return task;
                 })
