@@ -1,8 +1,17 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { TaskResponseDTO } from "@/types";
+import { format } from "date-fns";
+import type { TaskResponseDTO, TimeEntrySource } from "@/types";
 
 type PersistFn = (taskId: number, actualMinutes: number) => void;
+type LoggedTimeEntry = {
+  startedAt: string;
+  endedAt: string;
+  minutes: number;
+  entryDate: string;
+  source: TimeEntrySource;
+};
+type LogEntryFn = (taskId: number, entry: LoggedTimeEntry) => void;
 type TimerMode = "stopwatch" | "countdown";
 
 type CompletedSession = {
@@ -27,12 +36,19 @@ interface TimerState {
   isRunning: boolean;
   /** actualMinutes the task already had when this run started, used to compute the total to persist. */
   baseActualMinutes: number;
-  /** ISO timestamp of when the current countdown session was first started (survives pause/resume,
-   * cleared on cancel/stop/complete). Used as the PomodoroSession's startTime once saved. */
+  /** ISO timestamp of when the current run was first started (survives pause/resume, cleared on
+   * cancel/stop/complete). Used as the PomodoroSession's startTime once saved (countdown mode),
+   * and as a stopwatch-mode run's logged time entry startedAt. */
   firstStartedAt: string | null;
+  /** actualMinutes the task had at the moment this stopwatch run first started (survives pause/
+   * resume, unlike baseActualMinutes which advances on each resume). The difference between the
+   * task's actualMinutes when the run ends and this value is the run's logged entry duration. */
+  runStartActualMinutes: number | null;
   intervalId: ReturnType<typeof setInterval> | null;
   /** Registered once by TimerStoreBridge (mounted app-wide), since the store itself has no auth/API access. */
   persistFn: PersistFn | null;
+  /** Registered once by TimerStoreBridge, logs a completed stopwatch run as a history entry. */
+  logEntryFn: LogEntryFn | null;
   /** Bumped after a successful persist so any mounted task list can patch its local copy. */
   lastPersistedTask: TaskResponseDTO | null;
   /** Set when a countdown session finishes on its own (not cancelled), so the session-reflection
@@ -40,6 +56,7 @@ interface TimerState {
    * this is the only place that data is still available by the time the form is shown. */
   lastCompletedSession: CompletedSession | null;
   setPersistFn: (fn: PersistFn) => void;
+  setLogEntryFn: (fn: LogEntryFn) => void;
   setLastPersistedTask: (task: TaskResponseDTO) => void;
   startTimer: (
     taskId: number | null,
@@ -74,6 +91,31 @@ function persistElapsed(
   }
 }
 
+/** Logs the just-ended stopwatch run (start to stop/switch, spanning any internal pauses) as
+ * one history entry. actualMinutes itself is kept correct by persistElapsed separately - this
+ * only records when the run happened, so logging is skipped outside stopwatch mode or when the
+ * run details (run start, or how much it added) aren't available. */
+function logStopwatchRunEntry(
+  logEntryFn: LogEntryFn | null,
+  mode: TimerMode,
+  activeTaskId: number | null,
+  firstStartedAt: string | null,
+  runStartActualMinutes: number | null,
+  finalActualMinutes: number
+) {
+  if (mode !== "stopwatch" || activeTaskId === null || !logEntryFn) return;
+  if (firstStartedAt === null || runStartActualMinutes === null) return;
+  const entryMinutes = finalActualMinutes - runStartActualMinutes;
+  if (entryMinutes <= 0) return;
+  logEntryFn(activeTaskId, {
+    startedAt: firstStartedAt,
+    endedAt: new Date().toISOString(),
+    minutes: entryMinutes,
+    entryDate: format(new Date(firstStartedAt), "yyyy-MM-dd"),
+    source: "STOPWATCH",
+  });
+}
+
 export const useTimerStore = create<TimerState>()(
   persist(
     (set, get) => ({
@@ -86,12 +128,15 @@ export const useTimerStore = create<TimerState>()(
       isRunning: false,
       baseActualMinutes: 0,
       firstStartedAt: null,
+      runStartActualMinutes: null,
       intervalId: null,
       persistFn: null,
+      logEntryFn: null,
       lastPersistedTask: null,
       lastCompletedSession: null,
 
       setPersistFn: (fn) => set({ persistFn: fn }),
+      setLogEntryFn: (fn) => set({ logEntryFn: fn }),
       setLastPersistedTask: (task) => set({ lastPersistedTask: task }),
 
       tick: () => {
@@ -116,6 +161,7 @@ export const useTimerStore = create<TimerState>()(
             intervalId: null,
             baseActualMinutes: 0,
             firstStartedAt: null,
+            runStartActualMinutes: null,
             lastCompletedSession: {
               taskId: state.activeTaskId,
               durationMinutes: Math.round(cappedElapsed / 60),
@@ -151,9 +197,19 @@ export const useTimerStore = create<TimerState>()(
           return;
         }
 
-        // Switching from another running task/session: persist its elapsed time first.
+        // Switching from another running task/session: persist its elapsed time first, and log
+        // the run that's ending (if it was a task-linked stopwatch run) as a history entry.
         if (state.isRunning && state.activeTaskId !== null) {
+          const finalMinutes = state.baseActualMinutes + Math.round(state.elapsedSeconds / 60);
           persistElapsed(state.persistFn, state.activeTaskId, state.elapsedSeconds, state.baseActualMinutes);
+          logStopwatchRunEntry(
+            state.logEntryFn,
+            state.mode,
+            state.activeTaskId,
+            state.firstStartedAt,
+            state.runStartActualMinutes,
+            finalMinutes
+          );
         }
 
         const intervalId = setInterval(() => get().tick(), 1000);
@@ -167,7 +223,8 @@ export const useTimerStore = create<TimerState>()(
           baseActualMinutes: currentActualMinutes,
           isRunning: true,
           intervalId,
-          firstStartedAt: mode === "countdown" ? new Date().toISOString() : null,
+          firstStartedAt: new Date().toISOString(),
+          runStartActualMinutes: currentActualMinutes,
         });
       },
 
@@ -183,7 +240,16 @@ export const useTimerStore = create<TimerState>()(
         const state = get();
         if (state.intervalId) clearInterval(state.intervalId);
         const elapsedSeconds = computeElapsed(state.startedAt, state.elapsedWhenPaused);
+        const finalMinutes = state.baseActualMinutes + Math.round(elapsedSeconds / 60);
         persistElapsed(state.persistFn, state.activeTaskId, elapsedSeconds, state.baseActualMinutes);
+        logStopwatchRunEntry(
+          state.logEntryFn,
+          state.mode,
+          state.activeTaskId,
+          state.firstStartedAt,
+          state.runStartActualMinutes,
+          finalMinutes
+        );
         set({
           activeTaskId: null,
           mode: "stopwatch",
@@ -195,6 +261,7 @@ export const useTimerStore = create<TimerState>()(
           intervalId: null,
           baseActualMinutes: 0,
           firstStartedAt: null,
+          runStartActualMinutes: null,
         });
       },
 
@@ -212,6 +279,7 @@ export const useTimerStore = create<TimerState>()(
           intervalId: null,
           baseActualMinutes: 0,
           firstStartedAt: null,
+          runStartActualMinutes: null,
         });
       },
     }),
@@ -231,6 +299,7 @@ export const useTimerStore = create<TimerState>()(
         isRunning: state.isRunning,
         baseActualMinutes: state.baseActualMinutes,
         firstStartedAt: state.firstStartedAt,
+        runStartActualMinutes: state.runStartActualMinutes,
       }),
       onRehydrateStorage: () => () => {
         resumeTickingIfNeeded();

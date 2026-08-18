@@ -17,6 +17,15 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     Optional<Task> findByIdAndUserId(Long id, String userId);
 
     /**
+     * Batch-fetch tasks by ID, scoped to a specific user, used to validate an entire
+     * reorder batch in one query instead of one lookup per item.
+     * @param ids the task IDs
+     * @param userId the Clerk user ID
+     * @return the subset of matching tasks that belong to the user
+     */
+    List<Task> findByIdInAndUserId(List<Long> ids, String userId);
+
+    /**
      * Find all of a user's non-archived tasks scheduled for a given day, by sort order.
      * @param userId the Clerk user ID
      * @param scheduledDate the day to fetch tasks for

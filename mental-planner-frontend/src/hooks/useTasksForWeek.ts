@@ -115,6 +115,12 @@ function useTaskMutation<TVars, TResult>(
     mutationFn: config.mutationFn,
     ...withOptimisticUpdate<TVars>(queryClient, queryKey, config.updater, config.fallbackMessage),
     onSuccess: config.onSuccess,
+    onSettled: () => {
+      // Other task-list caches elsewhere in the app (e.g. the Pomodoro page's single-day
+      // query) use a different queryKey and don't share this hook's optimistic update, so
+      // they'd otherwise sit stale for up to staleTime after a task changes here.
+      void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
   });
 }
 

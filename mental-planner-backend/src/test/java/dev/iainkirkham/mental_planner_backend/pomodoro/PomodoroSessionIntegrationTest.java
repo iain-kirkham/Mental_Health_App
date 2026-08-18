@@ -3,6 +3,8 @@ package dev.iainkirkham.mental_planner_backend.pomodoro;
 import dev.iainkirkham.mental_planner_backend.config.TestAuthenticationConfig;
 import dev.iainkirkham.mental_planner_backend.config.TestSecurityConfiguration;
 import dev.iainkirkham.mental_planner_backend.config.TestcontainersConfiguration;
+import dev.iainkirkham.mental_planner_backend.tasks.Task;
+import dev.iainkirkham.mental_planner_backend.tasks.TaskRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,8 +43,22 @@ class PomodoroSessionIntegrationTest {
     @Autowired
     private PomodoroSessionRepository pomodoroSessionRepository;
 
+    @Autowired
+    private TaskRepository taskRepository;
+
     // Fixed instant for deterministic tests
     private static final Instant FIXED_NOW = Instant.parse("2025-12-01T00:00:00Z");
+
+    /**
+     * Creates a task owned by a different user, to test cross-user taskId rejection.
+     */
+    private Task createTaskOwnedByOtherUser() {
+        Task task = new Task();
+        task.setTitle("Someone else's task");
+        task.setScheduledDate(FIXED_NOW.atZone(java.time.ZoneOffset.UTC).toLocalDate());
+        task.setUserId("user_someone_else");
+        return taskRepository.save(task);
+    }
 
     /**
      * Creates a Pomodoro session directly in the database for test setup purposes.
@@ -84,6 +100,7 @@ class PomodoroSessionIntegrationTest {
     @AfterEach
     void cleanUp() {
         pomodoroSessionRepository.deleteAll();
+        taskRepository.deleteAll();
     }
 
     @Test
@@ -226,6 +243,57 @@ class PomodoroSessionIntegrationTest {
             assertThat(fetchedFromDb.getDuration()).isEqualTo(60);
             assertThat(fetchedFromDb.getNotes()).isEqualTo("Updated a super focused session!");
         });
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenCreatingSessionLinkedToAnotherUsersTask() {
+        // Arrange: a task that exists but belongs to a different user
+        Task othersTask = createTaskOwnedByOtherUser();
+
+        dev.iainkirkham.mental_planner_backend.pomodoro.dto.PomodoroSessionRequestDTO newSession =
+            new dev.iainkirkham.mental_planner_backend.pomodoro.dto.PomodoroSessionRequestDTO();
+        newSession.setStartTime(FIXED_NOW);
+        newSession.setEndTime(FIXED_NOW.plusSeconds(25 * 60));
+        newSession.setDuration(25);
+        newSession.setTaskId(othersTask.getId());
+
+        // Act: attempt to create a session linked to a task the caller doesn't own
+        ResponseEntity<Void> response = restTemplate.postForEntity(
+                "/api/pomodoro",
+                newSession,
+                Void.class
+        );
+
+        // Assert: rejected as not found, and nothing was persisted
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(pomodoroSessionRepository.findAll()).isEmpty();
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenUpdatingSessionToLinkAnotherUsersTask() {
+        // Arrange: an existing session owned by the caller, and a task owned by someone else
+        PomodoroSession existingSessionEntity = createTestPomodoroSessionInDb("to be relinked");
+        Task othersTask = createTaskOwnedByOtherUser();
+
+        dev.iainkirkham.mental_planner_backend.pomodoro.dto.PomodoroSessionRequestDTO updateSession =
+            new dev.iainkirkham.mental_planner_backend.pomodoro.dto.PomodoroSessionRequestDTO();
+        updateSession.setStartTime(FIXED_NOW);
+        updateSession.setEndTime(FIXED_NOW.plusSeconds(25 * 60));
+        updateSession.setDuration(25);
+        updateSession.setTaskId(othersTask.getId());
+
+        // Act: attempt to link the session to a task the caller doesn't own
+        ResponseEntity<Void> response = restTemplate.exchange(
+                "/api/pomodoro/" + existingSessionEntity.getId(),
+                HttpMethod.PUT,
+                new HttpEntity<>(updateSession),
+                Void.class
+        );
+
+        // Assert: rejected as not found, and the session was left unchanged
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        PomodoroSession unchanged = pomodoroSessionRepository.findById(existingSessionEntity.getId()).orElseThrow();
+        assertThat(unchanged.getTaskId()).isNull();
     }
 
     @Test

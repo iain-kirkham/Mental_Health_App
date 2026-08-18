@@ -1,6 +1,7 @@
 package dev.iainkirkham.mental_planner_backend.mood;
 
 import dev.iainkirkham.mental_planner_backend.config.AuthenticationContext;
+import dev.iainkirkham.mental_planner_backend.config.OwnedEntityLookup;
 import dev.iainkirkham.mental_planner_backend.exception.ResourceNotFoundException;
 import dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryRequestDTO;
 import dev.iainkirkham.mental_planner_backend.mood.dto.MoodEntryResponseDTO;
@@ -20,14 +21,24 @@ public class MoodEntryService {
 
     private final MoodEntryRepository moodEntryRepository;
     private final AuthenticationContext authenticationContext;
+    private final OwnedEntityLookup ownedEntityLookup;
     private final MoodEntryMapper moodEntryMapper;
 
     public MoodEntryService(MoodEntryRepository moodEntryRepository,
                            AuthenticationContext authenticationContext,
+                           OwnedEntityLookup ownedEntityLookup,
                            MoodEntryMapper moodEntryMapper) {
         this.moodEntryRepository = moodEntryRepository;
         this.authenticationContext = authenticationContext;
+        this.ownedEntityLookup = ownedEntityLookup;
         this.moodEntryMapper = moodEntryMapper;
+    }
+
+    /**
+     * Looks up a MoodEntry by ID, verifying it belongs to the authenticated user.
+     */
+    private MoodEntry findOwnedEntry(Long id) {
+        return ownedEntityLookup.findOwnedOrThrow(moodEntryRepository::findByIdAndUserId, id, "MoodEntry");
     }
 
     /**
@@ -80,10 +91,7 @@ public class MoodEntryService {
      * @throws ResourceNotFoundException If no entry with the given ID exists or doesn't belong to the user.
      */
     public MoodEntryResponseDTO getMoodEntryById(Long id) {
-        String userId = authenticationContext.getCurrentUserId();
-        MoodEntry entry = moodEntryRepository.findByIdAndUserId(id, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("MoodEntry not found with ID: " + id));
-        return moodEntryMapper.toResponseDTO(entry);
+        return moodEntryMapper.toResponseDTO(findOwnedEntry(id));
     }
 
     /**
@@ -96,9 +104,7 @@ public class MoodEntryService {
      */
     @Transactional
     public MoodEntryResponseDTO updateMoodEntry(Long id, MoodEntryRequestDTO requestDTO) {
-        String userId = authenticationContext.getCurrentUserId();
-        MoodEntry existingMoodEntry = moodEntryRepository.findByIdAndUserId(id, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("MoodEntry not found with ID: " + id));
+        MoodEntry existingMoodEntry = findOwnedEntry(id);
 
         moodEntryMapper.updateEntityFromDTO(existingMoodEntry, requestDTO);
 
@@ -114,9 +120,6 @@ public class MoodEntryService {
      */
     @Transactional
     public void deleteMoodEntry(Long id) {
-        String userId = authenticationContext.getCurrentUserId();
-        MoodEntry entry = moodEntryRepository.findByIdAndUserId(id, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("MoodEntry not found with ID: " + id));
-        moodEntryRepository.delete(entry);
+        moodEntryRepository.delete(findOwnedEntry(id));
     }
 }
