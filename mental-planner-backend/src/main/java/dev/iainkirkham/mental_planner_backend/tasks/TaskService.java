@@ -1,6 +1,7 @@
 package dev.iainkirkham.mental_planner_backend.tasks;
 
 import dev.iainkirkham.mental_planner_backend.config.AuthenticationContext;
+import dev.iainkirkham.mental_planner_backend.config.OwnedEntityLookup;
 import dev.iainkirkham.mental_planner_backend.exception.ResourceNotFoundException;
 import dev.iainkirkham.mental_planner_backend.tasks.dto.ActualMinutesRequestDTO;
 import dev.iainkirkham.mental_planner_backend.tasks.dto.CompletionRequestDTO;
@@ -28,17 +29,20 @@ public class TaskService {
 
     private final TaskRepository taskRepository;
     private final AuthenticationContext authenticationContext;
+    private final OwnedEntityLookup ownedEntityLookup;
     private final TaskMapper taskMapper;
     private final SubtaskRepository subtaskRepository;
     private final SubtaskMapper subtaskMapper;
 
     public TaskService(TaskRepository taskRepository,
                         AuthenticationContext authenticationContext,
+                        OwnedEntityLookup ownedEntityLookup,
                         TaskMapper taskMapper,
                         SubtaskRepository subtaskRepository,
                         SubtaskMapper subtaskMapper) {
         this.taskRepository = taskRepository;
         this.authenticationContext = authenticationContext;
+        this.ownedEntityLookup = ownedEntityLookup;
         this.taskMapper = taskMapper;
         this.subtaskRepository = subtaskRepository;
         this.subtaskMapper = subtaskMapper;
@@ -127,9 +131,19 @@ public class TaskService {
      * Looks up a task by ID, verifying it belongs to the authenticated user.
      */
     private Task findOwnedTask(Long id) {
-        String userId = authenticationContext.getCurrentUserId();
-        return taskRepository.findByIdAndUserId(id, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Task not found with ID: " + id));
+        return ownedEntityLookup.findOwnedOrThrow(taskRepository::findByIdAndUserId, id, "Task");
+    }
+
+    /**
+     * Verifies that a task exists and belongs to the authenticated user.
+     * Used by other feature packages (e.g. pomodoro) that link records to a task
+     * without needing access to the task itself.
+     *
+     * @param id The ID of the task.
+     * @throws ResourceNotFoundException if the task doesn't exist or doesn't belong to the user.
+     */
+    public void assertOwnedByCurrentUser(Long id) {
+        findOwnedTask(id);
     }
 
     /**
@@ -277,12 +291,9 @@ public class TaskService {
      */
     @Transactional
     public List<TaskResponseDTO> reorderTasks(List<TaskReorderItemDTO> items) {
-        String userId = authenticationContext.getCurrentUserId();
-
         List<Task> updatedTasks = items.stream()
                 .map(item -> {
-                    Task task = taskRepository.findByIdAndUserId(item.getId(), userId)
-                            .orElseThrow(() -> new ResourceNotFoundException("Task not found with ID: " + item.getId()));
+                    Task task = findOwnedTask(item.getId());
                     task.setSortOrder(item.getSortOrder());
                     return task;
                 })
@@ -300,9 +311,6 @@ public class TaskService {
      */
     @Transactional
     public void deleteTask(Long id) {
-        String userId = authenticationContext.getCurrentUserId();
-        Task task = taskRepository.findByIdAndUserId(id, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Task not found with ID: " + id));
-        taskRepository.delete(task);
+        taskRepository.delete(findOwnedTask(id));
     }
 }
