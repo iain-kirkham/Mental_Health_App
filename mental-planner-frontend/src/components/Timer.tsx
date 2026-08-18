@@ -2,6 +2,9 @@
 
 import React from "react";
 import Link from "next/link";
+import { format } from "date-fns";
+import { useAuth } from "@clerk/nextjs";
+import { useQuery } from "@tanstack/react-query";
 import { History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StatusAlerts from "@/components/StatusAlerts";
@@ -9,24 +12,66 @@ import PageHeader from "@/components/PageHeader";
 import { TimerDisplay } from "./TimerDisplay";
 import { TimerControls } from "./TimerControls";
 import { usePomodoroSessionContext } from "@/contexts/PomodoroSessionContext";
+import { useTimerStore } from "@/store/timerStore";
+import { getTasksForDate } from "@/lib/tasks-api";
+
+const DEFAULT_MINUTES = 5;
 
 export default function Timer() {
-    const {
-        timeLeft,
-        totalTime,
-        isRunning,
-        inputTime,
-        setInputTime,
-        startPause,
-        reset,
-        showAlert,
-        submitStatus,
-        errorMessage,
-    } = usePomodoroSessionContext();
+    const { submitStatus, errorMessage } = usePomodoroSessionContext();
+    const { getToken } = useAuth();
 
-    // setInputTime owns the "what is a valid duration" rule and ignores anything invalid.
+    const mode = useTimerStore((state) => state.mode);
+    const storeIsRunning = useTimerStore((state) => state.isRunning);
+    const elapsedSeconds = useTimerStore((state) => state.elapsedSeconds);
+    const sessionLengthMinutes = useTimerStore((state) => state.sessionLengthMinutes);
+    const activeTaskId = useTimerStore((state) => state.activeTaskId);
+    const startTimer = useTimerStore((state) => state.startTimer);
+    const pauseTimer = useTimerStore((state) => state.pauseTimer);
+    const cancelTimer = useTimerStore((state) => state.cancelTimer);
+
+    const [inputTime, setInputTimeState] = React.useState(DEFAULT_MINUTES);
+    const [selectedTaskId, setSelectedTaskId] = React.useState<number | null>(null);
+
+    const todayKey = format(new Date(), "yyyy-MM-dd");
+    const { data: todaysTasks = [] } = useQuery({
+        queryKey: ["tasks", todayKey],
+        queryFn: () => getTasksForDate(todayKey, getToken),
+    });
+
+    // A countdown session in progress (running or paused mid-session) elsewhere overrides the
+    // uncommitted local duration/task choice below - this page reflects whatever's actually
+    // accumulating in the shared timer, not a second, disconnected "what I meant to start" state.
+    const hasCountdownProgress = mode === "countdown" && sessionLengthMinutes !== null;
+    const isRunning = storeIsRunning && mode === "countdown";
+    const totalTime = hasCountdownProgress ? sessionLengthMinutes * 60 : inputTime * 60;
+    const timeLeft = hasCountdownProgress ? Math.max(0, totalTime - elapsedSeconds) : inputTime * 60;
+    const showAlert = false; // countdown-expiry alert now happens via the reflection form opening itself
+
+    const setInputTime = (minutes: number) => {
+        if (isNaN(minutes) || minutes <= 0) return;
+        setInputTimeState(minutes);
+    };
+
     const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) =>
         setInputTime(parseInt(e.target.value));
+
+    const startPause = () => {
+        if (isRunning) {
+            pauseTimer();
+            return;
+        }
+        const taskId = hasCountdownProgress ? activeTaskId : selectedTaskId;
+        const currentActualMinutes = taskId
+            ? (todaysTasks.find((t) => t.id === taskId)?.actualMinutes ?? 0)
+            : 0;
+        startTimer(taskId, currentActualMinutes, { mode: "countdown", sessionLengthMinutes: inputTime });
+    };
+
+    const reset = () => {
+        cancelTimer();
+        setSelectedTaskId(null);
+    };
 
     return (
         <>
@@ -57,13 +102,19 @@ export default function Timer() {
 
                     {/* Larger gap between timer and controls */}
                     <div className="w-full mt-8">
+                        <TaskLinkPicker
+                            tasks={todaysTasks}
+                            selectedTaskId={hasCountdownProgress ? activeTaskId : selectedTaskId}
+                            onChange={setSelectedTaskId}
+                            disabled={hasCountdownProgress}
+                        />
                         <TimerControls
                             isRunning={isRunning}
                             onStartPause={startPause}
                             onReset={reset}
                             inputTime={inputTime}
                             onInputChange={handleTimeChange}
-                            disabledInput={isRunning}
+                            disabledInput={hasCountdownProgress}
                         />
                     </div>
                 </div>
@@ -88,19 +139,65 @@ export default function Timer() {
                         <h3 className="text-sm font-semibold text-foreground mb-2 text-center md:text-left">
                             ⚙️ Session Settings
                         </h3>
-                        <div className="w-full">
+                        <div className="w-full space-y-4">
+                            <TaskLinkPicker
+                                tasks={todaysTasks}
+                                selectedTaskId={hasCountdownProgress ? activeTaskId : selectedTaskId}
+                                onChange={setSelectedTaskId}
+                                disabled={hasCountdownProgress}
+                            />
                             <TimerControls
                                 isRunning={isRunning}
                                 onStartPause={startPause}
                                 onReset={reset}
                                 inputTime={inputTime}
                                 onInputChange={handleTimeChange}
-                                disabledInput={isRunning}
+                                disabledInput={hasCountdownProgress}
                             />
                         </div>
                     </div>
                 </div>
             </div>
         </>
+    );
+}
+
+function TaskLinkPicker({
+    tasks,
+    selectedTaskId,
+    onChange,
+    disabled,
+}: {
+    tasks: { id: number; title: string }[];
+    selectedTaskId: number | null;
+    onChange: (id: number | null) => void;
+    disabled: boolean;
+}) {
+    return (
+        <div>
+            <label htmlFor="pomodoro-task-link" className="block text-sm font-semibold mb-2 text-foreground">
+                🔗 Track time against (optional)
+            </label>
+            <select
+                id="pomodoro-task-link"
+                value={selectedTaskId ?? ""}
+                onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
+                disabled={disabled}
+                className="w-full h-10 rounded-md border-2 border-input bg-transparent px-3 text-sm shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Link this session to a task"
+            >
+                <option value="">No task - just focus</option>
+                {tasks.map((task) => (
+                    <option key={task.id} value={task.id}>
+                        {task.title || "Untitled task"}
+                    </option>
+                ))}
+            </select>
+            {disabled && (
+                <p className="text-xs text-muted-foreground mt-2">
+                    Cancel the current session to change which task this is linked to.
+                </p>
+            )}
+        </div>
     );
 }
