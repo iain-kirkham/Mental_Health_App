@@ -17,6 +17,7 @@ import { useTimerStore } from "@/store/timerStore";
 import { toFriendlyMessage } from "@/lib/connectivity";
 import type {
   SubtaskRequestDTO,
+  SubtaskResponseDTO,
   TaskPriority,
   TaskReorderItemDTO,
   TaskRequestDTO,
@@ -75,6 +76,48 @@ function withOptimisticUpdate<TVars>(
   };
 }
 
+/** Computes the destination column for a task move/reorder: `taskId` removed from wherever it
+ * was, then reinserted into `destDateKey`'s column (sorted by `sortOrder`) at `destIndex`
+ * (clamped to the column's bounds), with its `scheduledDate` patched to `destDateKey`. Returns
+ * just that column, in its new order - the moved task's new `sortOrder` is its index within it.
+ * Shared by moveTaskMutation's `mutationFn` (needs the reorder payload and the moved task's
+ * clamped index) and its optimistic `updater` (needs to patch every affected task's sortOrder
+ * in the cache), so the splice/clamp logic has exactly one place to go wrong. */
+export function computeReorderedColumn(
+  current: TaskResponseDTO[],
+  vars: { taskId: number; destDateKey: string; destIndex: number }
+): TaskResponseDTO[] {
+  const task = current.find((t) => t.id === vars.taskId);
+  if (!task) return [];
+
+  const destColumn = current
+    .filter((t) => t.scheduledDate === vars.destDateKey && t.id !== vars.taskId)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+  const clampedIndex = Math.max(0, Math.min(vars.destIndex, destColumn.length));
+  destColumn.splice(clampedIndex, 0, { ...task, scheduledDate: vars.destDateKey });
+  return destColumn;
+}
+
+/** Every task mutation in this hook shares the same optimistic-update/rollback/mutate wiring -
+ * only what actually varies (the request, the optimistic patch, what to reconcile on success)
+ * differs per call site. */
+function useTaskMutation<TVars, TResult>(
+  queryClient: QueryClient,
+  queryKey: QueryKey,
+  config: {
+    mutationFn: (vars: TVars) => Promise<TResult>;
+    updater: (current: TaskResponseDTO[], vars: TVars) => TaskResponseDTO[];
+    fallbackMessage: string;
+    onSuccess?: (result: TResult, vars: TVars) => void;
+  }
+) {
+  return useMutation({
+    mutationFn: config.mutationFn,
+    ...withOptimisticUpdate<TVars>(queryClient, queryKey, config.updater, config.fallbackMessage),
+    onSuccess: config.onSuccess,
+  });
+}
+
 export default function useTasksForWeek(
   startDate: string,
   endDate: string,
@@ -119,20 +162,20 @@ export default function useTasksForWeek(
     });
   }, [queryClient, queryKey]);
 
-  const addTaskMutation = useMutation({
-    mutationFn: (vars: { request: TaskRequestDTO; tempId: number }) => apiCreateTask(vars.request, getToken),
-    ...withOptimisticUpdate<{ request: TaskRequestDTO; tempId: number }>(
-      queryClient,
-      queryKey,
-      (current, vars) => [...current, { ...vars.request, id: vars.tempId, subtasks: [] }],
-      "Unable to add task."
-    ),
-    onSuccess: (created, vars: { request: TaskRequestDTO; tempId: number }) => {
-      queryClient.setQueryData<TaskResponseDTO[]>(queryKey, (current = []) =>
-        current.map((t) => (t.id === vars.tempId ? created : t))
-      );
-    },
-  });
+  const addTaskMutation = useTaskMutation<{ request: TaskRequestDTO; tempId: number }, TaskResponseDTO>(
+    queryClient,
+    queryKey,
+    {
+      mutationFn: (vars) => apiCreateTask(vars.request, getToken),
+      updater: (current, vars) => [...current, { ...vars.request, id: vars.tempId, subtasks: [] }],
+      fallbackMessage: "Unable to add task.",
+      onSuccess: (created, vars) => {
+        queryClient.setQueryData<TaskResponseDTO[]>(queryKey, (current = []) =>
+          current.map((t) => (t.id === vars.tempId ? created : t))
+        );
+      },
+    }
+  );
 
   const addTask = (
     dateKey: string,
@@ -165,25 +208,25 @@ export default function useTasksForWeek(
     addTaskMutation.mutate({ request, tempId: -Date.now() });
   };
 
-  const updateTaskMutation = useMutation({
-    mutationFn: (vars: { id: number; changes: Partial<TaskRequestDTO> }) => {
-      const existing = queryClient.getQueryData<TaskResponseDTO[]>(queryKey)?.find((t) => t.id === vars.id);
-      if (!existing) throw new Error("Task no longer exists.");
-      const request: TaskRequestDTO = { ...toRequestDTO(existing), ...vars.changes };
-      return apiUpdateTask(vars.id, request, getToken);
-    },
-    ...withOptimisticUpdate<{ id: number; changes: Partial<TaskRequestDTO> }>(
-      queryClient,
-      queryKey,
-      (current, vars) => current.map((t) => (t.id === vars.id ? { ...t, ...vars.changes } : t)),
-      "Unable to update task."
-    ),
-    onSuccess: (updated) => {
-      queryClient.setQueryData<TaskResponseDTO[]>(queryKey, (current = []) =>
-        current.map((t) => (t.id === updated.id ? updated : t))
-      );
-    },
-  });
+  const updateTaskMutation = useTaskMutation<{ id: number; changes: Partial<TaskRequestDTO> }, TaskResponseDTO>(
+    queryClient,
+    queryKey,
+    {
+      mutationFn: (vars) => {
+        const existing = queryClient.getQueryData<TaskResponseDTO[]>(queryKey)?.find((t) => t.id === vars.id);
+        if (!existing) throw new Error("Task no longer exists.");
+        const request: TaskRequestDTO = { ...toRequestDTO(existing), ...vars.changes };
+        return apiUpdateTask(vars.id, request, getToken);
+      },
+      updater: (current, vars) => current.map((t) => (t.id === vars.id ? { ...t, ...vars.changes } : t)),
+      fallbackMessage: "Unable to update task.",
+      onSuccess: (updated) => {
+        queryClient.setQueryData<TaskResponseDTO[]>(queryKey, (current = []) =>
+          current.map((t) => (t.id === updated.id ? updated : t))
+        );
+      },
+    }
+  );
 
   const updateTask = (id: number, changes: Partial<TaskRequestDTO>) => {
     const existing = queryClient.getQueryData<TaskResponseDTO[]>(queryKey)?.find((t) => t.id === id);
@@ -195,38 +238,34 @@ export default function useTasksForWeek(
   // mutation, rather than firing the parent update and one PUT per subtask as separate
   // concurrent requests - those raced against each other and could leave a random subset of
   // subtasks out of sync with the optimistic UI state.
-  const setCompletionMutation = useMutation({
-    mutationFn: (vars: { id: number; completed: boolean }) => apiUpdateCompletion(vars.id, vars.completed, getToken),
-    ...withOptimisticUpdate<{ id: number; completed: boolean }>(
-      queryClient,
-      queryKey,
-      (current, vars) =>
+  const setCompletionMutation = useTaskMutation<{ id: number; completed: boolean }, TaskResponseDTO>(
+    queryClient,
+    queryKey,
+    {
+      mutationFn: (vars) => apiUpdateCompletion(vars.id, vars.completed, getToken),
+      updater: (current, vars) =>
         current.map((t) =>
           t.id === vars.id
             ? { ...t, completed: vars.completed, subtasks: t.subtasks.map((s) => ({ ...s, completed: vars.completed })) }
             : t
         ),
-      "Unable to update task."
-    ),
-    onSuccess: (updated) => {
-      queryClient.setQueryData<TaskResponseDTO[]>(queryKey, (current = []) =>
-        current.map((t) => (t.id === updated.id ? updated : t))
-      );
-    },
-  });
+      fallbackMessage: "Unable to update task.",
+      onSuccess: (updated) => {
+        queryClient.setQueryData<TaskResponseDTO[]>(queryKey, (current = []) =>
+          current.map((t) => (t.id === updated.id ? updated : t))
+        );
+      },
+    }
+  );
 
   const setTaskCompletion = (id: number, completed: boolean) => {
     setCompletionMutation.mutate({ id, completed });
   };
 
-  const removeTaskMutation = useMutation({
-    mutationFn: (vars: { id: number }) => apiDeleteTask(vars.id, getToken),
-    ...withOptimisticUpdate<{ id: number }>(
-      queryClient,
-      queryKey,
-      (current, vars) => current.filter((t) => t.id !== vars.id),
-      "Unable to delete task."
-    ),
+  const removeTaskMutation = useTaskMutation<{ id: number }, void>(queryClient, queryKey, {
+    mutationFn: (vars) => apiDeleteTask(vars.id, getToken),
+    updater: (current, vars) => current.filter((t) => t.id !== vars.id),
+    fallbackMessage: "Unable to delete task.",
   });
 
   const removeTask = (id: number) => {
@@ -236,17 +275,17 @@ export default function useTasksForWeek(
   // Moves a task to (possibly) a different day column at a given index, and renumbers that
   // column's sortOrder to match the drop position. Kept as a single compound mutation so it
   // queues/replays as one unit while offline.
-  const moveTaskMutation = useMutation({
-    mutationFn: async (vars: { taskId: number; sourceDateKey: string; destDateKey: string; destIndex: number }) => {
+  const moveTaskMutation = useTaskMutation<
+    { taskId: number; sourceDateKey: string; destDateKey: string; destIndex: number },
+    TaskResponseDTO[]
+  >(queryClient, queryKey, {
+    mutationFn: async (vars) => {
       const current = queryClient.getQueryData<TaskResponseDTO[]>(queryKey) ?? [];
       const task = current.find((t) => t.id === vars.taskId);
       if (!task) throw new Error("Task no longer exists.");
 
-      const destColumn = current
-        .filter((t) => t.scheduledDate === vars.destDateKey && t.id !== vars.taskId)
-        .sort((a, b) => a.sortOrder - b.sortOrder);
-      const clampedIndex = Math.max(0, Math.min(vars.destIndex, destColumn.length));
-      destColumn.splice(clampedIndex, 0, { ...task, scheduledDate: vars.destDateKey });
+      const destColumn = computeReorderedColumn(current, vars);
+      const clampedIndex = destColumn.findIndex((t) => t.id === vars.taskId);
       const items: TaskReorderItemDTO[] = destColumn.map((t, index) => ({ id: t.id, sortOrder: index }));
 
       // Compare against the day the task was on *before* this mutation's optimistic update
@@ -263,30 +302,20 @@ export default function useTasksForWeek(
       }
       return apiReorderTasks(items, getToken);
     },
-    ...withOptimisticUpdate<{ taskId: number; sourceDateKey: string; destDateKey: string; destIndex: number }>(
-      queryClient,
-      queryKey,
-      (current, vars) => {
-        const task = current.find((t) => t.id === vars.taskId);
-        if (!task) return current;
+    updater: (current, vars) => {
+      const destColumn = computeReorderedColumn(current, vars);
+      if (destColumn.length === 0) return current;
+      const sortOrderById = new Map(destColumn.map((t, index) => [t.id, index]));
 
-        const destColumn = current
-          .filter((t) => t.scheduledDate === vars.destDateKey && t.id !== vars.taskId)
-          .sort((a, b) => a.sortOrder - b.sortOrder);
-        const clampedIndex = Math.max(0, Math.min(vars.destIndex, destColumn.length));
-        destColumn.splice(clampedIndex, 0, { ...task, scheduledDate: vars.destDateKey });
-        const sortOrderById = new Map(destColumn.map((t, index) => [t.id, index]));
-
-        return current.map((t) => {
-          const newSortOrder = sortOrderById.get(t.id);
-          if (newSortOrder === undefined) return t;
-          return t.id === vars.taskId
-            ? { ...t, scheduledDate: vars.destDateKey, sortOrder: newSortOrder }
-            : { ...t, sortOrder: newSortOrder };
-        });
-      },
-      "Unable to move task."
-    ),
+      return current.map((t) => {
+        const newSortOrder = sortOrderById.get(t.id);
+        if (newSortOrder === undefined) return t;
+        return t.id === vars.taskId
+          ? { ...t, scheduledDate: vars.destDateKey, sortOrder: newSortOrder }
+          : { ...t, sortOrder: newSortOrder };
+      });
+    },
+    fallbackMessage: "Unable to move task.",
     onSuccess: (updatedColumn) => {
       const updatedById = new Map(updatedColumn.map((t) => [t.id, t]));
       queryClient.setQueryData<TaskResponseDTO[]>(queryKey, (current = []) =>
@@ -301,35 +330,29 @@ export default function useTasksForWeek(
     moveTaskMutation.mutate({ taskId, sourceDateKey: task.scheduledDate, destDateKey, destIndex });
   };
 
-  const archiveTaskMutation = useMutation({
-    mutationFn: (vars: { id: number }) => apiArchiveTask(vars.id, getToken),
-    ...withOptimisticUpdate<{ id: number }>(
-      queryClient,
-      queryKey,
-      (current, vars) => current.filter((t) => t.id !== vars.id),
-      "Unable to archive task."
-    ),
+  const archiveTaskMutation = useTaskMutation<{ id: number }, TaskResponseDTO>(queryClient, queryKey, {
+    mutationFn: (vars) => apiArchiveTask(vars.id, getToken),
+    updater: (current, vars) => current.filter((t) => t.id !== vars.id),
+    fallbackMessage: "Unable to archive task.",
   });
 
   const archiveTask = (id: number) => {
     archiveTaskMutation.mutate({ id });
   };
 
-  const addSubtaskMutation = useMutation({
-    mutationFn: (vars: { taskId: number; request: SubtaskRequestDTO; tempId: number }) =>
-      apiCreateSubtask(vars.taskId, vars.request, getToken),
-    ...withOptimisticUpdate<{ taskId: number; request: SubtaskRequestDTO; tempId: number }>(
-      queryClient,
-      queryKey,
-      (current, vars) =>
-        current.map((t) =>
-          t.id === vars.taskId
-            ? { ...t, subtasks: [...t.subtasks, { ...vars.request, id: vars.tempId, taskId: vars.taskId }] }
-            : t
-        ),
-      "Unable to add subtask."
-    ),
-    onSuccess: (created, vars: { taskId: number; request: SubtaskRequestDTO; tempId: number }) => {
+  const addSubtaskMutation = useTaskMutation<
+    { taskId: number; request: SubtaskRequestDTO; tempId: number },
+    SubtaskResponseDTO
+  >(queryClient, queryKey, {
+    mutationFn: (vars) => apiCreateSubtask(vars.taskId, vars.request, getToken),
+    updater: (current, vars) =>
+      current.map((t) =>
+        t.id === vars.taskId
+          ? { ...t, subtasks: [...t.subtasks, { ...vars.request, id: vars.tempId, taskId: vars.taskId }] }
+          : t
+      ),
+    fallbackMessage: "Unable to add subtask.",
+    onSuccess: (created, vars) => {
       queryClient.setQueryData<TaskResponseDTO[]>(queryKey, (current = []) =>
         current.map((t) =>
           t.id === vars.taskId ? { ...t, subtasks: t.subtasks.map((s) => (s.id === vars.tempId ? created : s)) } : t
@@ -355,8 +378,11 @@ export default function useTasksForWeek(
     addSubtaskMutation.mutate({ taskId, request, tempId: -Date.now() });
   };
 
-  const updateSubtaskMutation = useMutation({
-    mutationFn: (vars: { taskId: number; subtaskId: number; changes: Partial<SubtaskRequestDTO> }) => {
+  const updateSubtaskMutation = useTaskMutation<
+    { taskId: number; subtaskId: number; changes: Partial<SubtaskRequestDTO> },
+    SubtaskResponseDTO
+  >(queryClient, queryKey, {
+    mutationFn: (vars) => {
       const parent = queryClient.getQueryData<TaskResponseDTO[]>(queryKey)?.find((t) => t.id === vars.taskId);
       const existing = parent?.subtasks.find((s) => s.id === vars.subtaskId);
       if (!existing) throw new Error("Subtask no longer exists.");
@@ -369,18 +395,14 @@ export default function useTasksForWeek(
       };
       return apiUpdateSubtask(vars.taskId, vars.subtaskId, request, getToken);
     },
-    ...withOptimisticUpdate<{ taskId: number; subtaskId: number; changes: Partial<SubtaskRequestDTO> }>(
-      queryClient,
-      queryKey,
-      (current, vars) =>
-        current.map((t) =>
-          t.id === vars.taskId
-            ? { ...t, subtasks: t.subtasks.map((s) => (s.id === vars.subtaskId ? { ...s, ...vars.changes } : s)) }
-            : t
-        ),
-      "Unable to update subtask."
-    ),
-    onSuccess: (updated, vars: { taskId: number; subtaskId: number; changes: Partial<SubtaskRequestDTO> }) => {
+    updater: (current, vars) =>
+      current.map((t) =>
+        t.id === vars.taskId
+          ? { ...t, subtasks: t.subtasks.map((s) => (s.id === vars.subtaskId ? { ...s, ...vars.changes } : s)) }
+          : t
+      ),
+    fallbackMessage: "Unable to update subtask.",
+    onSuccess: (updated, vars) => {
       queryClient.setQueryData<TaskResponseDTO[]>(queryKey, (current = []) =>
         current.map((t) =>
           t.id === vars.taskId
@@ -395,19 +417,18 @@ export default function useTasksForWeek(
     updateSubtaskMutation.mutate({ taskId, subtaskId, changes });
   };
 
-  const removeSubtaskMutation = useMutation({
-    mutationFn: (vars: { taskId: number; subtaskId: number }) =>
-      apiDeleteSubtask(vars.taskId, vars.subtaskId, getToken),
-    ...withOptimisticUpdate<{ taskId: number; subtaskId: number }>(
-      queryClient,
-      queryKey,
-      (current, vars) =>
+  const removeSubtaskMutation = useTaskMutation<{ taskId: number; subtaskId: number }, void>(
+    queryClient,
+    queryKey,
+    {
+      mutationFn: (vars) => apiDeleteSubtask(vars.taskId, vars.subtaskId, getToken),
+      updater: (current, vars) =>
         current.map((t) =>
           t.id === vars.taskId ? { ...t, subtasks: t.subtasks.filter((s) => s.id !== vars.subtaskId) } : t
         ),
-      "Unable to delete subtask."
-    ),
-  });
+      fallbackMessage: "Unable to delete subtask.",
+    }
+  );
 
   const removeSubtaskItem = (taskId: number, subtaskId: number) => {
     removeSubtaskMutation.mutate({ taskId, subtaskId });
