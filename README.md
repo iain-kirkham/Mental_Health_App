@@ -168,14 +168,16 @@ heroku open -a your-backend-app-name
 ## Features
 
 ### Current Features
-- **🍅 Pomodoro Timer & Session Tracking:** Manage hyperfocus sessions with customizable timers. Rate each session (1-5) to track productivity patterns.
+- **🗂️ Weekly Task Planner:** Drag-and-drop kanban board across the week, with subtasks, priority tagging, and a detail view for each task — non-rigid, ADHD-friendly task capture.
+- **🍅 Pomodoro Timer & Session Tracking:** Manage hyperfocus sessions with customizable timers. Rate each session (1-5) to track productivity patterns. Timer state persists globally with a live countdown in the navbar.
 - **📊 Mood Tracker:** Daily mood logging with customizable factors and notes. Identify patterns and triggers over time.
+- **🌓 Dark Mode:** Catppuccin-themed light/dark toggle.
+- **📶 Offline Indicator:** Badge in the page header flags when the app loses connectivity.
 - **🎨 Clean, Responsive UI:** Built with Next.js and shadcn/ui components for a distraction-free experience.
-- **🔒 User Authentication:** Powered by Clerk for secure, personalized tracking.
+- **🔒 User Authentication:** Powered by Clerk for secure, personalized tracking. Signing out clears locally cached task data so it isn't left behind on shared devices.
 - **🐳 Dockerized:** Easy environment setup with Docker Compose and PostgreSQL.
 
 ### Planned ADHD-Friendly Features
-- **Flexible To-Do Lists:** Non-time-blocked task capture with priority tagging (no rigid schedules!)
 - **Dopamine Tracking:** Log activities and their impact on your energy/motivation
 - **Hyperfocus Activity Logger:** Track what activities trigger flow states
 - **Body Doubling Support:** Virtual co-working session timer
@@ -186,7 +188,7 @@ heroku open -a your-backend-app-name
 
 ## 🛠️ Technologies
 
-* **Frontend:** Next.js 16, TypeScript, React 19, shadcn/ui (Radix primitives), Tailwind CSS 4
+* **Frontend:** Next.js 16, TypeScript, React 19, shadcn/ui (Radix primitives), Tailwind CSS 4, TanStack Query, dnd-kit
 * **Backend:** Spring Boot 4.1, Java 21, Spring Data JPA, Spring Security (OAuth2 resource server), Lombok
 * **Database:** PostgreSQL with Flyway migrations
 * **Authentication:** Clerk (JWT validated by the backend as an OAuth2 resource server)
