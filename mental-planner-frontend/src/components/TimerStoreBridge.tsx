@@ -3,18 +3,9 @@
 import { useCallback, useEffect } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
-import { logTaskTimeEntry, updateActualMinutes } from '@/lib/tasks-api'
+import { updateActualMinutes } from '@/lib/tasks-api'
 import { useTimerStore } from '@/store/timerStore'
 import { toFriendlyMessage } from '@/lib/connectivity'
-import type { TimeEntrySource } from '@/types'
-
-type LoggedStopwatchRun = {
-  startedAt: string
-  endedAt: string
-  minutes: number
-  entryDate: string
-  source: TimeEntrySource
-}
 
 /**
  * Mounted once at the app root so the global task stopwatch (useTimerStore) can persist
@@ -42,25 +33,9 @@ export function TimerStoreBridge() {
     [getToken]
   )
 
-  const logEntry = useCallback(
-    (taskId: number, entry: LoggedStopwatchRun) => {
-      void (async () => {
-        try {
-          await logTaskTimeEntry(taskId, { ...entry, note: null }, getToken)
-        } catch (error) {
-          // Non-fatal: a lost history row shouldn't block the timer or the actualMinutes total,
-          // which was already persisted separately via `persist` above.
-          toast.error(toFriendlyMessage(error, 'Unable to save time entry.'))
-        }
-      })()
-    },
-    [getToken]
-  )
-
   useEffect(() => {
     useTimerStore.getState().setPersistFn(persist)
-    useTimerStore.getState().setLogEntryFn(logEntry)
-  }, [persist, logEntry])
+  }, [persist])
 
   // localStorage isn't available during SSR, so the store is created with hydration skipped
   // (see timerStore.ts) and rehydrated here instead, once mounted client-side.

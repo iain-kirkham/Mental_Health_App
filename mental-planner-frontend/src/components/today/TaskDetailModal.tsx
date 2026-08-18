@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
-import { History, ListChecks, Pause, Pencil, Play, Plus, Timer as TimerIcon, Trash2, X } from 'lucide-react'
+import { ListChecks, Pause, Play, Trash2, X } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -15,8 +15,7 @@ import DatePickerButton from './DatePickerButton'
 import PriorityPicker from './PriorityPicker'
 import { cn } from '@/lib/utils'
 import { useTimerStore } from '@/store/timerStore'
-import useTaskTimeEntries from '@/hooks/useTaskTimeEntries'
-import type { SubtaskResponseDTO, TaskPriority, TaskResponseDTO, TaskTimeEntryResponseDTO } from '@/types'
+import type { SubtaskResponseDTO, TaskPriority, TaskResponseDTO } from '@/types'
 
 interface TaskDetailModalProps {
   task: TaskResponseDTO | null
@@ -54,7 +53,7 @@ function DurationField({
   minutes,
   onSave,
   liveDisplay,
-  displayFormatter = (m: number) => formatLiveTime(m * 60),
+  displayFormatter = formatDuration,
 }: {
   label: string
   minutes: number
@@ -184,116 +183,6 @@ function SubtaskRow({
   )
 }
 
-function groupEntriesByDate(entries: TaskTimeEntryResponseDTO[]) {
-  const groups = new Map<string, TaskTimeEntryResponseDTO[]>()
-  for (const entry of entries) {
-    const list = groups.get(entry.entryDate) ?? []
-    list.push(entry)
-    groups.set(entry.entryDate, list)
-  }
-  // Entries already arrive most-recent-day-first from the API, and Map preserves insertion order.
-  return Array.from(groups.entries())
-}
-
-function todayDateKey() {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-}
-
-function TimeHistoryPanel({ taskId }: { taskId: number }) {
-  const { entries, isLoading, addManualEntry, isAddingManualEntry, deleteEntry, isDeletingEntryId } =
-    useTaskTimeEntries(taskId)
-  const [manualDate, setManualDate] = useState(todayDateKey)
-  const [manualMinutes, setManualMinutes] = useState('')
-  const [manualNote, setManualNote] = useState('')
-
-  const handleAddManual = (event: FormEvent) => {
-    event.preventDefault()
-    const minutes = Math.max(0, Number(manualMinutes) || 0)
-    if (minutes <= 0) return
-    addManualEntry({ entryDate: manualDate, minutes, note: manualNote.trim() || null })
-    setManualMinutes('')
-    setManualNote('')
-  }
-
-  const grouped = groupEntriesByDate(entries)
-
-  return (
-    <div className="ml-9 space-y-3 rounded-md border border-border/50 bg-muted/20 p-3">
-      <form onSubmit={handleAddManual} className="flex flex-wrap items-end gap-2">
-        <div className="flex flex-col gap-0.5">
-          <label className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Date</label>
-          <Input
-            type="date"
-            value={manualDate}
-            onChange={(event) => setManualDate(event.target.value)}
-            className="h-7 w-36 border-none bg-muted/50 px-1.5 text-xs shadow-none focus-visible:ring-1"
-          />
-        </div>
-        <div className="flex flex-col gap-0.5">
-          <label className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Minutes</label>
-          <Input
-            type="number"
-            min={1}
-            value={manualMinutes}
-            onChange={(event) => setManualMinutes(event.target.value)}
-            placeholder="0"
-            className="h-7 w-20 border-none bg-muted/50 px-1.5 text-right text-xs shadow-none focus-visible:ring-1"
-          />
-        </div>
-        <Input
-          value={manualNote}
-          onChange={(event) => setManualNote(event.target.value)}
-          placeholder="Optional note"
-          className="h-7 min-w-[120px] flex-1 border-none bg-muted/50 px-1.5 text-xs shadow-none focus-visible:ring-1"
-        />
-        <Button type="submit" size="sm" variant="secondary" className="h-7 gap-1 text-xs" disabled={isAddingManualEntry}>
-          <Plus className="h-3 w-3" />
-          Add
-        </Button>
-      </form>
-
-      {isLoading ? (
-        <p className="text-xs text-muted-foreground">Loading history...</p>
-      ) : grouped.length === 0 ? (
-        <p className="text-xs text-muted-foreground">No time logged yet.</p>
-      ) : (
-        <div className="space-y-2">
-          {grouped.map(([date, dayEntries]) => (
-            <div key={date}>
-              <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{date}</p>
-              <ul className="mt-1 space-y-1">
-                {dayEntries.map((entry) => (
-                  <li key={entry.id} className="flex items-center gap-2 text-xs">
-                    {entry.source === 'MANUAL' ? (
-                      <Pencil className="h-3 w-3 shrink-0 text-muted-foreground" />
-                    ) : (
-                      <TimerIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
-                    )}
-                    <span className="font-mono tabular-nums">{formatDuration(entry.minutes)}</span>
-                    {entry.note && <span className="truncate text-muted-foreground">{entry.note}</span>}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="ml-auto h-5 w-5 shrink-0"
-                      onClick={() => deleteEntry(entry.id)}
-                      disabled={isDeletingEntryId === entry.id}
-                      aria-label="Delete time entry"
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
 function TaskDetailForm({
   task,
   onUpdate,
@@ -319,7 +208,6 @@ function TaskDetailForm({
   const [category, setCategory] = useState(task.category ?? '')
   const [editingCategory, setEditingCategory] = useState(false)
   const [showSubtasks, setShowSubtasks] = useState(task.subtasks.length > 0)
-  const [showHistory, setShowHistory] = useState(false)
   const [subtaskTitle, setSubtaskTitle] = useState('')
   const notesRef = useRef<HTMLTextAreaElement | null>(null)
 
@@ -438,27 +326,15 @@ function TaskDetailForm({
             minutes={task.actualMinutes}
             onSave={(minutes) => onUpdate(task.id, { actualMinutes: minutes })}
             liveDisplay={isTimerRunning && liveSeconds != null ? formatLiveTime(liveSeconds) : null}
+            displayFormatter={(minutes) => formatLiveTime(minutes * 60)}
           />
           <DurationField
             label="Planned"
             minutes={task.plannedMinutes ?? 0}
             onSave={(minutes) => onUpdate(task.id, { plannedMinutes: minutes })}
           />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className={cn('h-8 w-8 rounded-full', showHistory && 'text-foreground')}
-            onClick={() => setShowHistory((v) => !v)}
-            aria-label={showHistory ? 'Hide time history' : 'View time history'}
-          >
-            <History className="h-4 w-4" />
-          </Button>
         </div>
       </div>
-
-      {/* Time history */}
-      {showHistory && <TimeHistoryPanel taskId={task.id} />}
 
       {/* Inline subtasks */}
       {showSubtasks && (

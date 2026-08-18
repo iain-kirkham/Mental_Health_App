@@ -21,6 +21,12 @@ interface TaskCardProps {
   isOverlay?: boolean
 }
 
+function formatDuration(minutes: number) {
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
+  return `${hours}:${String(mins).padStart(2, '0')}`
+}
+
 function formatLiveTime(totalSeconds: number) {
   const minutes = Math.floor(totalSeconds / 60)
   const seconds = totalSeconds % 60
@@ -60,7 +66,7 @@ export default function TaskCard({
   // doesn't visually jump - e.g. a paused 45m task must read "45:00", not "0:45", the
   // instant you press play, since the live ticker uses the same minutes:seconds format.
   const actualDisplay = formatLiveTime(isTimerRunning && liveSeconds != null ? liveSeconds : task.actualMinutes * 60)
-  const timeBadgeText = hasPlanned ? `${actualDisplay} / ${formatLiveTime((task.plannedMinutes ?? 0) * 60)}` : actualDisplay
+  const timeBadgeText = hasPlanned ? `${actualDisplay} / ${formatDuration(task.plannedMinutes ?? 0)}` : actualDisplay
 
   const handleAddSubtask = (event: FormEvent) => {
     event.preventDefault()

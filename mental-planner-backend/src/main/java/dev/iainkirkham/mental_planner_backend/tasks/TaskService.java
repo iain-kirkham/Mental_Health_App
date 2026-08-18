@@ -10,8 +10,6 @@ import dev.iainkirkham.mental_planner_backend.tasks.dto.SubtaskResponseDTO;
 import dev.iainkirkham.mental_planner_backend.tasks.dto.TaskReorderItemDTO;
 import dev.iainkirkham.mental_planner_backend.tasks.dto.TaskRequestDTO;
 import dev.iainkirkham.mental_planner_backend.tasks.dto.TaskResponseDTO;
-import dev.iainkirkham.mental_planner_backend.tasks.dto.TaskTimeEntryRequestDTO;
-import dev.iainkirkham.mental_planner_backend.tasks.dto.TaskTimeEntryResponseDTO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,25 +33,19 @@ public class TaskService {
     private final TaskMapper taskMapper;
     private final SubtaskRepository subtaskRepository;
     private final SubtaskMapper subtaskMapper;
-    private final TaskTimeEntryRepository taskTimeEntryRepository;
-    private final TaskTimeEntryMapper taskTimeEntryMapper;
 
     public TaskService(TaskRepository taskRepository,
                         AuthenticationContext authenticationContext,
                         OwnedEntityLookup ownedEntityLookup,
                         TaskMapper taskMapper,
                         SubtaskRepository subtaskRepository,
-                        SubtaskMapper subtaskMapper,
-                        TaskTimeEntryRepository taskTimeEntryRepository,
-                        TaskTimeEntryMapper taskTimeEntryMapper) {
+                        SubtaskMapper subtaskMapper) {
         this.taskRepository = taskRepository;
         this.authenticationContext = authenticationContext;
         this.ownedEntityLookup = ownedEntityLookup;
         this.taskMapper = taskMapper;
         this.subtaskRepository = subtaskRepository;
         this.subtaskMapper = subtaskMapper;
-        this.taskTimeEntryRepository = taskTimeEntryRepository;
-        this.taskTimeEntryMapper = taskTimeEntryMapper;
     }
 
     /**
@@ -288,74 +280,6 @@ public class TaskService {
         Subtask subtask = subtaskRepository.findByIdAndTaskId(subtaskId, taskId)
                 .orElseThrow(() -> new ResourceNotFoundException("Subtask not found with ID: " + subtaskId));
         subtaskRepository.delete(subtask);
-    }
-
-    /**
-     * Retrieves all time entries logged against a task owned by the authenticated user,
-     * most recent day first.
-     *
-     * @param taskId The parent task's ID.
-     * @return The task's time entries as response DTOs.
-     * @throws ResourceNotFoundException if the task doesn't exist or doesn't belong to the user.
-     */
-    public List<TaskTimeEntryResponseDTO> getTimeEntries(Long taskId) {
-        findOwnedTask(taskId);
-        String userId = authenticationContext.getCurrentUserId();
-        return taskTimeEntryMapper.toResponseDTOList(
-                taskTimeEntryRepository.findByTaskIdAndUserIdOrderByEntryDateDescCreatedAtDesc(taskId, userId));
-    }
-
-    /**
-     * Logs a time entry against a task owned by the authenticated user. A stopwatch entry
-     * (one continuous run, already reflected in {@link Task#getActualMinutes()} via the
-     * separate pause/stop persist) is recorded as history only. A manual entry has no other
-     * path to update the total, so it's added onto {@link Task#getActualMinutes()} directly.
-     *
-     * @param taskId The parent task's ID.
-     * @param requestDTO The time entry to log.
-     * @return The saved entry as a response DTO.
-     * @throws ResourceNotFoundException if the task doesn't exist or doesn't belong to the user.
-     */
-    @Transactional
-    public TaskTimeEntryResponseDTO logTimeEntry(Long taskId, TaskTimeEntryRequestDTO requestDTO) {
-        Task task = findOwnedTask(taskId);
-        TaskTimeEntry entry = taskTimeEntryMapper.toEntity(requestDTO, taskId);
-        entry.setId(null);
-        entry.setUserId(authenticationContext.getCurrentUserId());
-        TaskTimeEntry saved = taskTimeEntryRepository.save(entry);
-
-        if (requestDTO.getSource() == TimeEntrySource.MANUAL) {
-            task.setActualMinutes(task.getActualMinutes() + requestDTO.getMinutes());
-            taskRepository.save(task);
-        }
-
-        return taskTimeEntryMapper.toResponseDTO(saved);
-    }
-
-    /**
-     * Deletes a time entry belonging to a task owned by the authenticated user. Deleting a
-     * manual entry unwinds its minutes from {@link Task#getActualMinutes()} (clamped at 0);
-     * deleting a stopwatch entry only removes the history row, since the total was already
-     * kept correct by the stopwatch's own pause/stop persist.
-     *
-     * @param taskId The parent task's ID.
-     * @param entryId The time entry's ID.
-     * @throws ResourceNotFoundException if the parent task or entry doesn't exist / isn't owned by the user.
-     */
-    @Transactional
-    public void deleteTimeEntry(Long taskId, Long entryId) {
-        findOwnedTask(taskId);
-        String userId = authenticationContext.getCurrentUserId();
-        TaskTimeEntry entry = taskTimeEntryRepository.findByIdAndTaskIdAndUserId(entryId, taskId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Time entry not found with ID: " + entryId));
-
-        if (entry.getSource() == TimeEntrySource.MANUAL) {
-            Task task = findOwnedTask(taskId);
-            task.setActualMinutes(Math.max(0, task.getActualMinutes() - entry.getMinutes()));
-            taskRepository.save(task);
-        }
-
-        taskTimeEntryRepository.delete(entry);
     }
 
     /**

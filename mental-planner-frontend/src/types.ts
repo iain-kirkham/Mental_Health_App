@@ -64,22 +64,6 @@ export interface SubtaskResponseDTO extends SubtaskRequestDTO {
     taskId: number;
 }
 
-export type TimeEntrySource = 'STOPWATCH' | 'MANUAL';
-
-export interface TaskTimeEntryRequestDTO {
-    startedAt: string | null; // ISO instant, null for manual entries
-    endedAt: string | null; // ISO instant, null for manual entries
-    minutes: number;
-    entryDate: string; // "YYYY-MM-DD"
-    source: TimeEntrySource;
-    note: string | null;
-}
-
-export interface TaskTimeEntryResponseDTO extends TaskTimeEntryRequestDTO {
-    id: number;
-    taskId: number;
-}
-
 // Mood Entry Types
 export interface MoodEntryCreationDTO {
     moodScore: number;
