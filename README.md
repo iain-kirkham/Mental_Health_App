@@ -92,76 +92,51 @@ Backend integration tests use Testcontainers, so Docker must be running.
 
 ---
 
-## Deploying to Heroku
+## Deploying
 
-This repository is a monorepo, so deploy **two separate Heroku apps**:
+- **Backend** (`mental-planner-backend`, Spring Boot API) — Heroku, deployed automatically via GitHub Actions (see below)
+- **Frontend** (`mental-planner-frontend`, Next.js web app) — [Vercel](https://vercel.com), deployed automatically on push (configured in the Vercel dashboard, not in this repo)
 
-- `mental-planner-backend` (Spring Boot API)
-- `mental-planner-frontend` (Next.js web app)
+### Backend: automated via GitHub Actions
 
-### 1) Prerequisites
+Pushes to `master` that touch `mental-planner-backend/**` trigger [`.github/workflows/deploy-backend-heroku.yml`](.github/workflows/deploy-backend-heroku.yml), which builds `mental-planner-backend/Dockerfile`, pushes the image to Heroku's container registry, and releases it via the Platform API. It can also be run manually from the Actions tab (`workflow_dispatch`).
 
-- Install the [Heroku CLI](https://devcenter.heroku.com/articles/heroku-cli)
-- Log in: `heroku login`
-
-### 2) Create backend app
+**One-time setup** (already done for `planner-backend`, keep for reference/new environments):
 
 ```bash
-heroku create your-backend-app-name --buildpack heroku/java
+heroku create your-backend-app-name
+heroku stack:set container -a your-backend-app-name
 heroku addons:create heroku-postgresql:mini -a your-backend-app-name
 ```
 
 Set backend config vars:
 
 ```bash
-heroku config:set CORS_ALLOWED_ORIGINS=https://your-frontend-app-name.herokuapp.com -a your-backend-app-name
+heroku config:set CORS_ALLOWED_ORIGINS=https://your-frontend-app.vercel.app -a your-backend-app-name
 heroku config:set CLERK_ISSUER_URL=your_clerk_issuer_url -a your-backend-app-name
 heroku config:set CLERK_JWKS_URI=your_clerk_jwks_uri -a your-backend-app-name
 ```
 
-> The backend is configured to use Heroku's `PORT` and Postgres `JDBC_DATABASE_*` variables automatically.
+> The app's stack **must** be `container` — the workflow deploys by pushing a Docker image, not a buildpack build. The backend itself is configured to use Heroku's `PORT` and Postgres `JDBC_DATABASE_*`/`DATABASE_URL` variables automatically (`docker-entrypoint.sh` parses `DATABASE_URL` into the JDBC vars Spring expects).
 
-### 3) Create frontend app
-
-```bash
-heroku create your-frontend-app-name --buildpack heroku/nodejs
-```
-
-Set frontend config vars:
+Add these as **GitHub repo secrets** (Settings → Secrets and variables → Actions) so the workflow can authenticate:
 
 ```bash
-heroku config:set NEXT_PUBLIC_API_URL=https://your-backend-app-name.herokuapp.com -a your-frontend-app-name
-heroku config:set NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key -a your-frontend-app-name
-heroku config:set CLERK_SECRET_KEY=your_clerk_secret_key -a your-frontend-app-name
+heroku authorizations:create -d "github-actions-planner-backend-deploy"
+# copy the Token value from the output, then:
+gh secret set HEROKU_API_KEY --repo <owner>/<repo>   # paste the token when prompted
+gh secret set HEROKU_APP_NAME --repo <owner>/<repo> --body "your-backend-app-name"
 ```
 
-### 4) Add Heroku remotes
+After that, every push to `master` under `mental-planner-backend/**` deploys automatically — no manual `git subtree push` needed for the backend.
 
-```bash
-heroku git:remote -a your-backend-app-name --remote heroku-backend
-heroku git:remote -a your-frontend-app-name --remote heroku-frontend
-```
+### Frontend: Vercel
 
-### 5) Deploy from monorepo subfolders
+The frontend deploys via Vercel's own GitHub integration (root directory set to `mental-planner-frontend`) — pushes to `master` deploy automatically, no workflow file needed. Set these as Vercel project environment variables (Project Settings → Environment Variables), not in this repo:
 
-Deploy backend:
-
-```bash
-git subtree push --prefix mental-planner-backend heroku-backend main
-```
-
-Deploy frontend:
-
-```bash
-git subtree push --prefix mental-planner-frontend heroku-frontend main
-```
-
-### 6) Open apps
-
-```bash
-heroku open -a your-frontend-app-name
-heroku open -a your-backend-app-name
-```
+- `NEXT_PUBLIC_API_URL` — the backend's Heroku URL
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+- `CLERK_SECRET_KEY`
 
 ---
 
