@@ -92,12 +92,10 @@ Backend integration tests use Testcontainers, so Docker must be running.
 
 ---
 
-## Deploying to Heroku
+## Deploying
 
-This repository is a monorepo, so deploy **two separate Heroku apps**:
-
-- `mental-planner-backend` (Spring Boot API) — deployed automatically via GitHub Actions (see below)
-- `mental-planner-frontend` (Next.js web app) — deployed manually
+- **Backend** (`mental-planner-backend`, Spring Boot API) — Heroku, deployed automatically via GitHub Actions (see below)
+- **Frontend** (`mental-planner-frontend`, Next.js web app) — [Vercel](https://vercel.com), deployed automatically on push (configured in the Vercel dashboard, not in this repo)
 
 ### Backend: automated via GitHub Actions
 
@@ -114,7 +112,7 @@ heroku addons:create heroku-postgresql:mini -a your-backend-app-name
 Set backend config vars:
 
 ```bash
-heroku config:set CORS_ALLOWED_ORIGINS=https://your-frontend-app-name.herokuapp.com -a your-backend-app-name
+heroku config:set CORS_ALLOWED_ORIGINS=https://your-frontend-app.vercel.app -a your-backend-app-name
 heroku config:set CLERK_ISSUER_URL=your_clerk_issuer_url -a your-backend-app-name
 heroku config:set CLERK_JWKS_URI=your_clerk_jwks_uri -a your-backend-app-name
 ```
@@ -132,40 +130,13 @@ gh secret set HEROKU_APP_NAME --repo <owner>/<repo> --body "your-backend-app-nam
 
 After that, every push to `master` under `mental-planner-backend/**` deploys automatically — no manual `git subtree push` needed for the backend.
 
-### Frontend: manual deploy
+### Frontend: Vercel
 
-1) Create the app:
+The frontend deploys via Vercel's own GitHub integration (root directory set to `mental-planner-frontend`) — pushes to `master` deploy automatically, no workflow file needed. Set these as Vercel project environment variables (Project Settings → Environment Variables), not in this repo:
 
-```bash
-heroku create your-frontend-app-name --buildpack heroku/nodejs
-```
-
-2) Set config vars:
-
-```bash
-heroku config:set NEXT_PUBLIC_API_URL=https://your-backend-app-name.herokuapp.com -a your-frontend-app-name
-heroku config:set NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key -a your-frontend-app-name
-heroku config:set CLERK_SECRET_KEY=your_clerk_secret_key -a your-frontend-app-name
-```
-
-3) Add a Heroku remote:
-
-```bash
-heroku git:remote -a your-frontend-app-name --remote heroku-frontend
-```
-
-4) Deploy from the monorepo subfolder:
-
-```bash
-git subtree push --prefix mental-planner-frontend heroku-frontend main
-```
-
-5) Open apps:
-
-```bash
-heroku open -a your-frontend-app-name
-heroku open -a your-backend-app-name
-```
+- `NEXT_PUBLIC_API_URL` — the backend's Heroku URL
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+- `CLERK_SECRET_KEY`
 
 ---
 
