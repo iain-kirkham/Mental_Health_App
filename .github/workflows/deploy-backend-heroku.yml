@@ -1,0 +1,47 @@
+name: Deploy backend to Heroku
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "mental-planner-backend/**"
+      - ".github/workflows/deploy-backend-heroku.yml"
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: heroku-backend-deploy
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to Heroku container registry
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: echo "$HEROKU_API_KEY" | docker login --username=_ --password-stdin registry.heroku.com
+
+      - name: Build and push image
+        env:
+          HEROKU_APP_NAME: ${{ secrets.HEROKU_APP_NAME }}
+        run: |
+          docker build -t registry.heroku.com/$HEROKU_APP_NAME/web ./mental-planner-backend
+          docker push registry.heroku.com/$HEROKU_APP_NAME/web
+
+      - name: Release
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+          HEROKU_APP_NAME: ${{ secrets.HEROKU_APP_NAME }}
+        run: |
+          curl -s -n -X PATCH https://api.heroku.com/apps/$HEROKU_APP_NAME/formation \
+            -d "{
+              \"updates\": [{
+                \"type\": \"web\",
+                \"docker_image\": \"$(docker inspect registry.heroku.com/$HEROKU_APP_NAME/web --format={{.Id}})\"
+              }]
+            }" \
+            -H "Content-Type: application/json" \
+            -H "Accept: application/vnd.heroku+json; version=3" \
+            -H "Authorization: Bearer $HEROKU_API_KEY"
