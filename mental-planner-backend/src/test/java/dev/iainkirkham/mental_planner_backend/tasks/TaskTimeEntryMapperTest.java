@@ -50,6 +50,26 @@ class TaskTimeEntryMapperTest {
     }
 
     @Test
+    void toEntity_ShouldConvertCountdownRequestDTOToEntity() {
+        TaskTimeEntryRequestDTO requestDTO = new TaskTimeEntryRequestDTO();
+        requestDTO.setStartedAt(FIXED_NOW);
+        requestDTO.setEndedAt(FIXED_NOW.plusSeconds(1500));
+        requestDTO.setMinutes(25);
+        requestDTO.setEntryDate(FIXED_DATE);
+        requestDTO.setSource(TimeEntrySource.COUNTDOWN);
+
+        TaskTimeEntry entity = mapper.toEntity(requestDTO, 1L);
+
+        assertThat(entity).isNotNull();
+        assertThat(entity.getTaskId()).isEqualTo(1L);
+        assertThat(entity.getStartedAt()).isEqualTo(FIXED_NOW);
+        assertThat(entity.getEndedAt()).isEqualTo(FIXED_NOW.plusSeconds(1500));
+        assertThat(entity.getMinutes()).isEqualTo(25);
+        assertThat(entity.getEntryDate()).isEqualTo(FIXED_DATE);
+        assertThat(entity.getSource()).isEqualTo(TimeEntrySource.COUNTDOWN);
+    }
+
+    @Test
     void toEntity_ShouldConvertManualRequestDTOWithNoTimestamps() {
         TaskTimeEntryRequestDTO requestDTO = new TaskTimeEntryRequestDTO();
         requestDTO.setMinutes(45);

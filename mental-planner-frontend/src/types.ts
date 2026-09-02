@@ -64,7 +64,7 @@ export interface SubtaskResponseDTO extends SubtaskRequestDTO {
     taskId: number;
 }
 
-export type TimeEntrySource = 'STOPWATCH' | 'MANUAL';
+export type TimeEntrySource = 'STOPWATCH' | 'MANUAL' | 'COUNTDOWN';
 
 export interface TaskTimeEntryRequestDTO {
     startedAt: string | null; // ISO instant, null for manual entries

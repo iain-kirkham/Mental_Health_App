@@ -91,10 +91,10 @@ function persistElapsed(
   }
 }
 
-/** Logs the just-ended stopwatch run (start to stop/switch, spanning any internal pauses) as
- * one history entry. actualMinutes itself is kept correct by persistElapsed separately - this
- * only records when the run happened, so logging is skipped outside stopwatch mode or when the
- * run details (run start, or how much it added) aren't available. */
+/** Logs the just-ended run (start to stop/switch/complete, spanning any internal pauses) as one
+ * history entry, tagged STOPWATCH or COUNTDOWN to match how it was run. actualMinutes itself is
+ * kept correct by persistElapsed separately - this only records when the run happened, so
+ * logging is skipped when the run details (run start, or how much it added) aren't available. */
 function logStopwatchRunEntry(
   logEntryFn: LogEntryFn | null,
   mode: TimerMode,
@@ -103,7 +103,7 @@ function logStopwatchRunEntry(
   runStartActualMinutes: number | null,
   finalActualMinutes: number
 ) {
-  if (mode !== "stopwatch" || activeTaskId === null || !logEntryFn) return;
+  if (activeTaskId === null || !logEntryFn) return;
   if (firstStartedAt === null || runStartActualMinutes === null) return;
   const entryMinutes = finalActualMinutes - runStartActualMinutes;
   if (entryMinutes <= 0) return;
@@ -112,7 +112,7 @@ function logStopwatchRunEntry(
     endedAt: new Date().toISOString(),
     minutes: entryMinutes,
     entryDate: format(new Date(firstStartedAt), "yyyy-MM-dd"),
-    source: "STOPWATCH",
+    source: mode === "countdown" ? "COUNTDOWN" : "STOPWATCH",
   });
 }
 
@@ -150,7 +150,16 @@ export const useTimerStore = create<TimerState>()(
         ) {
           if (state.intervalId) clearInterval(state.intervalId);
           const cappedElapsed = state.sessionLengthMinutes * 60;
+          const finalMinutes = state.baseActualMinutes + Math.round(cappedElapsed / 60);
           persistElapsed(state.persistFn, state.activeTaskId, cappedElapsed, state.baseActualMinutes);
+          logStopwatchRunEntry(
+            state.logEntryFn,
+            state.mode,
+            state.activeTaskId,
+            state.firstStartedAt,
+            state.runStartActualMinutes,
+            finalMinutes
+          );
           set({
             activeTaskId: null,
             sessionLengthMinutes: null,
