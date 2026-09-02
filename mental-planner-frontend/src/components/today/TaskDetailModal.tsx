@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
-import { History, ListChecks, Pause, Pencil, Play, Plus, Timer as TimerIcon, Trash2, X } from 'lucide-react'
+import { History, ListChecks, Pause, Pencil, Play, Plus, Timer as TimerIcon, Trash2, X, Zap } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -267,6 +267,8 @@ function TimeHistoryPanel({ taskId }: { taskId: number }) {
                   <li key={entry.id} className="flex items-center gap-2 text-xs">
                     {entry.source === 'MANUAL' ? (
                       <Pencil className="h-3 w-3 shrink-0 text-muted-foreground" />
+                    ) : entry.source === 'COUNTDOWN' ? (
+                      <Zap className="h-3 w-3 shrink-0 text-muted-foreground" />
                     ) : (
                       <TimerIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
                     )}
@@ -307,12 +309,23 @@ function TaskDetailForm({
 }: TaskDetailFormProps) {
   const activeTaskId = useTimerStore((state) => state.activeTaskId)
   const isRunning = useTimerStore((state) => state.isRunning)
+  const timerMode = useTimerStore((state) => state.mode)
+  const sessionLengthMinutes = useTimerStore((state) => state.sessionLengthMinutes)
   const elapsedSeconds = useTimerStore((state) => state.elapsedSeconds)
   const startTimer = useTimerStore((state) => state.startTimer)
   const pauseTimer = useTimerStore((state) => state.pauseTimer)
+  const cancelTimer = useTimerStore((state) => state.cancelTimer)
 
-  const isTimerRunning = isRunning && activeTaskId === task.id
+  const isStopwatchRunningHere = isRunning && activeTaskId === task.id && timerMode === 'stopwatch'
+  const isCountdownRunningHere = isRunning && activeTaskId === task.id && timerMode === 'countdown'
+  const isTimerRunning = isStopwatchRunningHere
   const liveSeconds = isTimerRunning ? task.actualMinutes * 60 + elapsedSeconds : null
+  const countdownSecondsLeft =
+    isCountdownRunningHere && sessionLengthMinutes != null
+      ? Math.max(0, sessionLengthMinutes * 60 - elapsedSeconds)
+      : null
+
+  const [selectedPreset, setSelectedPreset] = useState(30)
 
   const [title, setTitle] = useState(task.title)
   const [description, setDescription] = useState(task.description ?? '')
@@ -402,8 +415,8 @@ function TaskDetailForm({
       </div>
 
       {/* Frameless header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex flex-1 items-center gap-3">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-3">
           <Checkbox
             checked={task.completed}
             onCheckedChange={(checked) => onToggleComplete(task.id, checked === true)}
@@ -422,17 +435,71 @@ function TaskDetailForm({
           />
         </div>
 
-        <div className="flex shrink-0 items-center gap-3 pt-1">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           <Button
             type="button"
             variant="ghost"
             size="icon"
             className={cn('h-8 w-8 rounded-full', isTimerRunning && 'text-chart-2')}
             onClick={() => (isTimerRunning ? pauseTimer() : startTimer(task.id, task.actualMinutes))}
-            aria-label={isTimerRunning ? 'Pause timer' : 'Start timer'}
+            disabled={isCountdownRunningHere}
+            aria-label={isCountdownRunningHere ? 'Focus session in progress' : isTimerRunning ? 'Pause timer' : 'Start timer'}
           >
             {isTimerRunning ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
           </Button>
+          {isCountdownRunningHere ? (
+            <div className="flex items-center gap-1.5">
+              <span className="font-mono text-sm font-semibold tabular-nums text-chart-2">
+                {countdownSecondsLeft != null ? formatLiveTime(countdownSecondsLeft) : null}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 rounded-full"
+                onClick={() => pauseTimer()}
+                aria-label="Pause focus session"
+              >
+                <Pause className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 rounded-full"
+                onClick={() => cancelTimer()}
+                aria-label="Cancel focus session"
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1">
+              {[10, 30, 60].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setSelectedPreset(preset)}
+                  className={cn(
+                    'rounded-full px-2 py-0.5 font-mono text-xs tabular-nums',
+                    selectedPreset === preset ? 'bg-chart-2/20 text-chart-2' : 'text-muted-foreground hover:bg-muted/50'
+                  )}
+                >
+                  {preset}
+                </button>
+              ))}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 rounded-full"
+                onClick={() => startTimer(task.id, task.actualMinutes, { mode: 'countdown', sessionLengthMinutes: selectedPreset })}
+                aria-label="Start focus session"
+              >
+                <Zap className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
           <DurationField
             label="Actual"
             minutes={task.actualMinutes}

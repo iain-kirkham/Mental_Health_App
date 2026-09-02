@@ -250,6 +250,33 @@ class TaskIntegrationTest {
     }
 
     @Test
+    void logTimeEntry_CountdownEntry_ShouldNotChangeActualMinutes() {
+        Task task = createTaskInDb("Deep work", TestAuthenticationConfig.TEST_USER_ID);
+        task.setActualMinutes(25);
+        taskRepository.save(task);
+
+        TaskTimeEntryRequestDTO requestDTO = new TaskTimeEntryRequestDTO();
+        requestDTO.setStartedAt(java.time.Instant.parse("2025-12-01T09:00:00Z"));
+        requestDTO.setEndedAt(java.time.Instant.parse("2025-12-01T09:25:00Z"));
+        requestDTO.setMinutes(25);
+        requestDTO.setEntryDate(FIXED_DATE);
+        requestDTO.setSource(TimeEntrySource.COUNTDOWN);
+
+        ResponseEntity<TaskTimeEntryResponseDTO> response = restTemplate.postForEntity(
+                "/api/tasks/" + task.getId() + "/time-entries",
+                requestDTO,
+                TaskTimeEntryResponseDTO.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getSource()).isEqualTo(TimeEntrySource.COUNTDOWN);
+        // Like STOPWATCH, a completed focus session already has actualMinutes kept correct by
+        // its own persist path - logging the entry must not double-count it.
+        assertThat(taskRepository.findById(task.getId()).orElseThrow().getActualMinutes()).isEqualTo(25);
+    }
+
+    @Test
     void logTimeEntry_ManualEntry_ShouldAddToActualMinutes() {
         Task task = createTaskInDb("Deep work", TestAuthenticationConfig.TEST_USER_ID);
         task.setActualMinutes(10);
@@ -320,6 +347,31 @@ class TaskIntegrationTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         assertThat(taskRepository.findById(task.getId()).orElseThrow().getActualMinutes()).isEqualTo(30);
+    }
+
+    @Test
+    void deleteTimeEntry_CountdownEntry_ShouldLeaveActualMinutesUnchanged() {
+        Task task = createTaskInDb("Deep work", TestAuthenticationConfig.TEST_USER_ID);
+        task.setActualMinutes(25);
+        taskRepository.save(task);
+
+        TaskTimeEntry entry = new TaskTimeEntry();
+        entry.setTaskId(task.getId());
+        entry.setUserId(TestAuthenticationConfig.TEST_USER_ID);
+        entry.setMinutes(25);
+        entry.setEntryDate(FIXED_DATE);
+        entry.setSource(TimeEntrySource.COUNTDOWN);
+        entry = taskTimeEntryRepository.save(entry);
+
+        ResponseEntity<Void> response = restTemplate.exchange(
+                "/api/tasks/" + task.getId() + "/time-entries/" + entry.getId(),
+                HttpMethod.DELETE,
+                null,
+                Void.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(taskRepository.findById(task.getId()).orElseThrow().getActualMinutes()).isEqualTo(25);
     }
 
     @Test

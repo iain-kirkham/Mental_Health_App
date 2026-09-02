@@ -2,6 +2,14 @@ HELP.md
 .gradle
 .env.*
 build/
+
+# Machine-local dev overrides (e.g. a patched cacerts for antivirus TLS interception) - never
+# something to share across machines/CI, so kept out of the shared Dockerfile/compose config.
+docker-compose.override.yml
+mental-planner-backend/.local/
+
+# Local Claude Code config
+.claude/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
