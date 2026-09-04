@@ -1,0 +1,73 @@
+package dev.iainkirkham.mental_planner_backend.security;
+
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import javax.crypto.SecretKey;
+
+/**
+ * Gets or creates the per-user data encryption key (DEK) used to encrypt that user's
+ * field values, transparently handling envelope wrapping/unwrapping under the application
+ * master key and per-request caching so callers never see key material management.
+ */
+@Service
+public class UserDataKeyService {
+
+    private final UserEncryptionKeyRepository repository;
+    private final EncryptionService encryptionService;
+    private final MasterKeyProvider masterKeyProvider;
+    private final CurrentUserKeyCache requestCache;
+
+    public UserDataKeyService(UserEncryptionKeyRepository repository,
+                               EncryptionService encryptionService,
+                               MasterKeyProvider masterKeyProvider,
+                               CurrentUserKeyCache requestCache) {
+        this.repository = repository;
+        this.encryptionService = encryptionService;
+        this.masterKeyProvider = masterKeyProvider;
+        this.requestCache = requestCache;
+    }
+
+    /**
+     * Returns the given user's data encryption key, generating and persisting one
+     * (wrapped under the master key) on first use.
+     */
+    public SecretKey getDataKey(String userId) {
+        SecretKey cached = requestCache.get(userId);
+        if (cached != null) {
+            return cached;
+        }
+
+        SecretKey dataKey = unwrap(findOrCreateWrappedKey(userId));
+        requestCache.put(userId, dataKey);
+        return dataKey;
+    }
+
+    private String findOrCreateWrappedKey(String userId) {
+        return repository.findById(userId)
+                .map(UserEncryptionKey::getWrappedDek)
+                .orElseGet(() -> createWrappedKey(userId));
+    }
+
+    @Transactional
+    protected String createWrappedKey(String userId) {
+        SecretKey newDataKey = encryptionService.generateKey();
+        String wrapped = encryptionService.encrypt(newDataKey.getEncoded(), masterKeyProvider.getMasterKey());
+
+        try {
+            repository.save(new UserEncryptionKey(userId, wrapped));
+            return wrapped;
+        } catch (DataIntegrityViolationException raceLost) {
+            // Another concurrent request already created this user's key first - use theirs.
+            return repository.findById(userId)
+                    .map(UserEncryptionKey::getWrappedDek)
+                    .orElseThrow(() -> raceLost);
+        }
+    }
+
+    private SecretKey unwrap(String wrappedDek) {
+        byte[] rawKey = encryptionService.decryptToBytes(wrappedDek, masterKeyProvider.getMasterKey());
+        return encryptionService.toKey(rawKey);
+    }
+}
