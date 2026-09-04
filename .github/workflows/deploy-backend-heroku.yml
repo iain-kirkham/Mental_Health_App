@@ -24,31 +24,17 @@ jobs:
       - name: Install Heroku CLI
         run: curl https://cli-assets.heroku.com/install.sh | sh
 
-      # heroku container:login writes the same Docker Hub-style credentials that a raw
-      # `docker login` would, so the runner's ~/.docker/config.json warning is expected here
-      # too - harmless on a GitHub-hosted runner since the whole VM is destroyed after the
-      # job, but the credentials file is removed explicitly below anyway (defense in depth).
       - name: Log in to Heroku container registry
         env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
         run: heroku container:login
 
-      # Builds mental-planner-backend/Dockerfile and pushes it to the registry. Unlike the
-      # previous plain `docker build`/`docker push`, this tags the image the way Heroku's
-      # release step expects, and fails the job (non-zero exit) if the push fails instead of
-      # silently continuing.
       - name: Build and push image
         env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
           HEROKU_APP_NAME: ${{ secrets.HEROKU_APP_NAME }}
         run: heroku container:push web -a "$HEROKU_APP_NAME"
 
-      # Replaces the old raw `curl -s -X PATCH .../formation` call, which silently swallowed
-      # errors (curl's exit code and the JSON response were never checked) - that's what let
-      # every previous "successful" run report green while never actually releasing a new
-      # image. `heroku container:release` exits non-zero on failure, so a broken release now
-      # fails the job instead of masquerading as a success, and it creates the `web` process
-      # type if it doesn't already exist rather than requiring it to be pre-provisioned.
       - name: Release
         env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
