@@ -9,7 +9,7 @@ import javax.crypto.SecretKey;
 /**
  * Gets or creates the per-user data encryption key (DEK) used to encrypt that user's
  * field values, transparently handling envelope wrapping/unwrapping under the application
- * master key and per-request caching so callers never see key material management.
+ * master key and short-lived caching so callers never see key material management.
  */
 @Service
 public class UserDataKeyService {
@@ -17,16 +17,16 @@ public class UserDataKeyService {
     private final UserEncryptionKeyRepository repository;
     private final EncryptionService encryptionService;
     private final MasterKeyProvider masterKeyProvider;
-    private final CurrentUserKeyCache requestCache;
+    private final UserDataKeyCache keyCache;
 
     public UserDataKeyService(UserEncryptionKeyRepository repository,
                                EncryptionService encryptionService,
                                MasterKeyProvider masterKeyProvider,
-                               CurrentUserKeyCache requestCache) {
+                               UserDataKeyCache keyCache) {
         this.repository = repository;
         this.encryptionService = encryptionService;
         this.masterKeyProvider = masterKeyProvider;
-        this.requestCache = requestCache;
+        this.keyCache = keyCache;
     }
 
     /**
@@ -34,13 +34,13 @@ public class UserDataKeyService {
      * (wrapped under the master key) on first use.
      */
     public SecretKey getDataKey(String userId) {
-        SecretKey cached = requestCache.get(userId);
+        SecretKey cached = keyCache.get(userId);
         if (cached != null) {
             return cached;
         }
 
         SecretKey dataKey = unwrap(findOrCreateWrappedKey(userId));
-        requestCache.put(userId, dataKey);
+        keyCache.put(userId, dataKey);
         return dataKey;
     }
 

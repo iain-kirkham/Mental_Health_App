@@ -1,6 +1,8 @@
 package dev.iainkirkham.mental_planner_backend.mood;
 
 
+import dev.iainkirkham.mental_planner_backend.security.EncryptedStringConverter;
+import dev.iainkirkham.mental_planner_backend.security.EncryptedStringListConverter;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -9,8 +11,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.List;
@@ -55,17 +55,21 @@ public class MoodEntry {
     /**
      * List of factors contributing to the user's mood.
      * Each string in the list corresponds to a specific factor such as sleep or work.
-     * This field is stored in the Database as a JSON array, allowing for multiple factors.
+     * Encrypted as a single value (JSON-serialized, then encrypted) rather than stored
+     * as a plain JSON column.
      */
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "factors")
+    @Convert(converter = EncryptedStringListConverter.class)
+    @Column(name = "factors", columnDefinition = "TEXT")
+    @ToString.Exclude
     private List<String> factors;
 
     /**
      * Optional notes about the mood entry.
      * Stored as text in the database to allow user to record long descriptions if required.
      */
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(columnDefinition = "TEXT")
+    @ToString.Exclude
     private String notes;
 
     /**

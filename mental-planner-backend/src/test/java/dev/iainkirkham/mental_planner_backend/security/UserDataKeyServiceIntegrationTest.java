@@ -1,40 +1,21 @@
 package dev.iainkirkham.mental_planner_backend.security;
 
 import dev.iainkirkham.mental_planner_backend.config.TestcontainersConfiguration;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.crypto.SecretKey;
 import java.util.Base64;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * {@link UserDataKeyService} caches the unwrapped data key in a request-scoped bean, so
- * these tests bind a mock request context per test to stand in for a real HTTP request.
- */
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
 @ActiveProfiles("test")
 class UserDataKeyServiceIntegrationTest {
-
-    @BeforeEach
-    void bindMockRequestContext() {
-        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(new MockHttpServletRequest()));
-    }
-
-    @AfterEach
-    void clearMockRequestContext() {
-        RequestContextHolder.resetRequestAttributes();
-    }
 
     @Autowired
     private UserDataKeyService userDataKeyService;

@@ -1,5 +1,6 @@
 package dev.iainkirkham.mental_planner_backend.pomodoro;
 
+import dev.iainkirkham.mental_planner_backend.security.EncryptedStringConverter;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -57,7 +58,9 @@ public class PomodoroSession {
      * Optional notes about the pomodoro session.
      * Stored as text in the database to allow user to record long descriptions if required.
      */
-    @Column(name = "notes", length = 1000)
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "notes", columnDefinition = "TEXT")
+    @ToString.Exclude
     private String notes;
 
     /**
