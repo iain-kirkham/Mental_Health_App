@@ -1,5 +1,6 @@
 package dev.iainkirkham.mental_planner_backend.tasks;
 
+import dev.iainkirkham.mental_planner_backend.security.EncryptedStringConverter;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
@@ -24,7 +25,9 @@ public class Subtask {
     private Long taskId;
 
     @NotNull
-    @Column(nullable = false)
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(nullable = false, columnDefinition = "TEXT")
+    @ToString.Exclude
     private String title;
 
     @Column(nullable = false)

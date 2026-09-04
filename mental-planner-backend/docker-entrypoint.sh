@@ -12,4 +12,7 @@ if [ -n "$DATABASE_URL" ]; then
   fi
 fi
 
-exec java $JAVA_OPTS -Dserver.port="${PORT:-8080}" -jar app.jar
+# -XX:-HeapDumpOnOutOfMemoryError is placed after $JAVA_OPTS so it always wins regardless of
+# what a config var sets - a heap dump would contain decrypted plaintext and the unwrapped
+# master key in the clear. See docs/security/data-at-rest-encryption-plan.md.
+exec java $JAVA_OPTS -XX:-HeapDumpOnOutOfMemoryError -Dserver.port="${PORT:-8080}" -jar app.jar

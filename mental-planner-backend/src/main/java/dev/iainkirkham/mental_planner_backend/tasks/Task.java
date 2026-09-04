@@ -1,5 +1,6 @@
 package dev.iainkirkham.mental_planner_backend.tasks;
 
+import dev.iainkirkham.mental_planner_backend.security.EncryptedStringConverter;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
@@ -26,10 +27,14 @@ public class Task {
     private Long id;
 
     @NotNull
-    @Column(nullable = false)
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(nullable = false, columnDefinition = "TEXT")
+    @ToString.Exclude
     private String title;
 
-    @Column(length = 2000)
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(columnDefinition = "TEXT")
+    @ToString.Exclude
     private String description;
 
     /**
@@ -77,7 +82,9 @@ public class Task {
     /**
      * Free-form category/tag, rendered as a pill on the card (e.g. "product", "planning").
      */
-    @Column(length = 50)
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(columnDefinition = "TEXT")
+    @ToString.Exclude
     private String category;
 
     /**
