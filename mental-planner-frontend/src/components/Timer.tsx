@@ -75,7 +75,7 @@ export default function Timer() {
 
     return (
         <>
-            <PageHeader title="🍅 Pomodoro Timer">
+            <PageHeader title="Focus timer">
                 <Link href="/pomodoro/history">
                     <Button variant="ghost" size="sm">
                         <History className="mr-2 h-4 w-4" />
@@ -138,7 +138,7 @@ export default function Timer() {
                     {/* Controls Section */}
                     <div className="w-full md:max-w-xl mx-auto">
                         <h3 className="text-sm font-semibold text-foreground mb-2 text-center md:text-left">
-                            ⚙️ Session Settings
+                            Session settings
                         </h3>
                         <div className="w-full space-y-4">
                             <TaskLinkPicker
@@ -180,7 +180,7 @@ function TaskLinkPicker({
     return (
         <div>
             <label htmlFor="pomodoro-task-link" className="block text-sm font-semibold mb-2 text-foreground">
-                🔗 Track time against (optional)
+                Track time against (optional)
             </label>
             <select
                 id="pomodoro-task-link"

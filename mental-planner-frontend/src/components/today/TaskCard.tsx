@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from 'react'
 import type { DraggableAttributes, DraggableSyntheticListeners } from '@dnd-kit/core'
-import { Plus } from 'lucide-react'
+import { Plus, Timer as TimerIcon } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
@@ -16,6 +16,7 @@ interface TaskCardProps {
   onToggleSubtask: (taskId: number, subtaskId: number, completed: boolean) => void
   onAddSubtask: (taskId: number, title: string) => void
   onOpenDetail: (task: TaskResponseDTO) => void
+  onOpenFocus?: (task: TaskResponseDTO) => void
   dragHandleAttributes?: DraggableAttributes
   dragHandleListeners?: DraggableSyntheticListeners
   isOverlay?: boolean
@@ -31,7 +32,7 @@ function formatStartTime(instant: string) {
   return new Date(instant).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
 }
 
-const CHECKED_GREEN = 'data-[state=checked]:bg-chart-2 data-[state=checked]:border-chart-2'
+const CHECKED_DONE = 'data-[state=checked]:bg-status-done data-[state=checked]:border-status-done'
 
 export default function TaskCard({
   task,
@@ -39,6 +40,7 @@ export default function TaskCard({
   onToggleSubtask,
   onAddSubtask,
   onOpenDetail,
+  onOpenFocus,
   dragHandleAttributes,
   dragHandleListeners,
   isOverlay,
@@ -54,6 +56,8 @@ export default function TaskCard({
   const liveSeconds = isTimerRunning ? task.actualMinutes * 60 + elapsedSeconds : null
 
   const hasSubtasks = task.subtasks.length > 0
+  const completedSubtaskCount = task.subtasks.filter((subtask) => subtask.completed).length
+  const subtaskProgress = hasSubtasks ? completedSubtaskCount / task.subtasks.length : 0
   const hasTimeBadge = isTimerRunning || task.plannedMinutes != null || task.actualMinutes > 0
   const hasPlanned = task.plannedMinutes != null && task.plannedMinutes > 0
   // Always render Actual as minutes:seconds (not hours:minutes) so restarting the timer
@@ -106,13 +110,30 @@ export default function TaskCard({
           <span
             className={cn(
               'shrink-0 rounded-sm px-1.5 py-0.5 font-mono text-[10px] font-semibold tabular-nums',
-              isTimerRunning ? 'bg-chart-2/20 text-chart-2' : 'bg-primary/15 text-primary'
+              isTimerRunning ? 'bg-status-active/20 text-status-active' : 'bg-primary/15 text-primary'
             )}
           >
             {timeBadgeText}
           </span>
         )}
       </div>
+
+      {/* Subtask progress: only meaningful once a task actually has subtasks to roll up */}
+      {hasSubtasks && (
+        <div
+          className="h-[3px] w-full overflow-hidden rounded-full bg-muted"
+          role="progressbar"
+          aria-valuenow={completedSubtaskCount}
+          aria-valuemin={0}
+          aria-valuemax={task.subtasks.length}
+          aria-label="Subtasks complete"
+        >
+          <div
+            className="h-full rounded-full bg-status-done transition-all duration-300 ease-in-out"
+            style={{ width: `${subtaskProgress * 100}%` }}
+          />
+        </div>
+      )}
 
       {/* Middle: inline subtasks */}
       {(hasSubtasks || addingSubtask) && (
@@ -130,7 +151,7 @@ export default function TaskCard({
                 onCheckedChange={(checked) => onToggleSubtask(task.id, subtask.id, checked === true)}
                 onPointerDown={(event) => event.stopPropagation()}
                 onClick={(event) => event.stopPropagation()}
-                className={cn('h-3.5 w-3.5 rounded-full', CHECKED_GREEN)}
+                className={cn('h-3.5 w-3.5 rounded-full', CHECKED_DONE)}
               />
               <span
                 className={cn(
@@ -182,19 +203,33 @@ export default function TaskCard({
         </div>
       )}
 
-      {/* Bottom: complete checkbox + category */}
+      {/* Bottom: complete checkbox + focus entry + category */}
       <div className="flex items-center gap-2 pt-1">
         <Checkbox
           checked={task.completed}
           onCheckedChange={(checked) => onToggleComplete(task.id, checked === true)}
           onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => event.stopPropagation()}
-          className={cn('rounded-full', CHECKED_GREEN)}
+          className={cn('rounded-full', CHECKED_DONE)}
         />
+        {onOpenFocus && !task.completed && (
+          <button
+            type="button"
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation()
+              onOpenFocus(task)
+            }}
+            className="rounded-sm p-1 text-muted-foreground opacity-0 hover:bg-muted/50 hover:text-lavender group-hover:opacity-100"
+            aria-label="Start focus session"
+          >
+            <TimerIcon className="h-3 w-3" />
+          </button>
+        )}
         <div className="flex-1" />
         {task.category && (
-          <span className="rounded-sm bg-accent px-1.5 py-0.5 text-[11px] font-medium text-accent-foreground">
-            #{task.category}
+          <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-secondary-foreground">
+            {task.category}
           </span>
         )}
       </div>

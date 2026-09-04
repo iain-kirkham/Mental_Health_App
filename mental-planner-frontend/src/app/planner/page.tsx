@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button'
 import DayColumn from '@/components/today/DayColumn'
 import TaskCard from '@/components/today/TaskCard'
 import TaskDetailModal from '@/components/today/TaskDetailModal'
+import FocusModeOverlay from '@/components/today/FocusModeOverlay'
 import NewTaskModal from '@/components/today/NewTaskModal'
 import DatePickerButton from '@/components/today/DatePickerButton'
 import PageHeader from '@/components/PageHeader'
@@ -62,6 +63,8 @@ export default function PlannerPage() {
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null)
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null
   const [addTaskDateKey, setAddTaskDateKey] = useState<string | null>(null)
+  const [focusTaskId, setFocusTaskId] = useState<number | null>(null)
+  const focusTask = tasks.find((task) => task.id === focusTaskId) ?? null
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
@@ -135,6 +138,7 @@ export default function PlannerPage() {
                     onToggleSubtask={(taskId, subtaskId, completed) => void updateSubtaskItem(taskId, subtaskId, { completed })}
                     onAddSubtask={(taskId, title) => void addSubtask(taskId, title)}
                     onOpenDetail={(task) => setSelectedTaskId(task.id)}
+                    onOpenFocus={(task) => setFocusTaskId(task.id)}
                   />
                 )
               })}
@@ -148,6 +152,7 @@ export default function PlannerPage() {
                   onToggleSubtask={() => {}}
                   onAddSubtask={() => {}}
                   onOpenDetail={() => {}}
+                  onOpenFocus={() => {}}
                   isOverlay
                 />
               ) : null}
@@ -173,6 +178,10 @@ export default function PlannerPage() {
         onToggleSubtask={(taskId, subtaskId, completed) => void updateSubtaskItem(taskId, subtaskId, { completed })}
         onDeleteSubtask={(taskId, subtaskId) => void removeSubtaskItem(taskId, subtaskId)}
         onUpdateSubtask={(taskId, subtaskId, changes) => void updateSubtaskItem(taskId, subtaskId, changes)}
+        onOpenFocus={(task) => {
+          setSelectedTaskId(null)
+          setFocusTaskId(task.id)
+        }}
       />
 
       <NewTaskModal
@@ -181,6 +190,13 @@ export default function PlannerPage() {
           if (!open) setAddTaskDateKey(null)
         }}
         onCreate={(dateKey, title, details) => void addTask(dateKey, title, details)}
+      />
+
+      <FocusModeOverlay
+        task={focusTask}
+        onOpenChange={(open) => {
+          if (!open) setFocusTaskId(null)
+        }}
       />
     </main>
   )

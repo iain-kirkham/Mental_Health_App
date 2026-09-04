@@ -10,7 +10,7 @@ import PageHeader from '@/components/PageHeader';
 export default function MoodHistoryPage() {
     return (
         <>
-            <PageHeader title="📓 Your journal">
+            <PageHeader title="Your journal">
                 <Link href="/mood-tracker">
                     <Button variant="ghost" size="sm">
                         <ArrowLeft className="mr-2 h-4 w-4" />

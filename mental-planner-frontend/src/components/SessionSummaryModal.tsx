@@ -30,41 +30,36 @@ export function SessionSummaryModal({
                                     }: SessionSummaryModalProps) {
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
-            <div className="bg-card rounded-2xl p-8 max-w-md w-full shadow-2xl border border-border animate-in zoom-in duration-300">
-                <div className="text-center mb-6">
-                    <div className="text-4xl mb-2">✨</div>
-                    <h2 className="text-2xl font-bold bg-linear-to-r from-primary to-[hsl(var(--chart-1))] bg-clip-text text-transparent">
-                        Session Summary
+            <div className="bg-card rounded-lg p-8 max-w-md w-full shadow-lg border border-border animate-in zoom-in duration-200">
+                <div className="mb-6">
+                    <h2 className="text-xl font-semibold text-foreground">
+                        How did that session go?
                     </h2>
-                    <p className="text-sm text-muted-foreground mt-1">
-                        How did your focus session go?
-                    </p>
                 </div>
 
                 <div className="space-y-5">
                     <div>
-                        <label className="block mb-3 font-semibold text-foreground">
-                            {getScoreEmoji(score)} Your Score (1-5)
+                        <label className="block mb-3 text-sm font-semibold text-foreground">
+                            Score (1-5)
                         </label>
-                        <Input
-                            type="number"
-                            min={1}
-                            max={5}
-                            value={score}
-                            onChange={onScoreChange}
-                            className="text-center text-2xl font-bold h-14 shadow-xs border-2"
-                            disabled={isSubmitting}
-                            aria-label="Session score"
-                        />
-                        <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-                            <span>😢 Poor</span>
-                            <span>🎉 Excellent</span>
+                        <div className="flex items-center gap-3">
+                            <Input
+                                type="number"
+                                min={1}
+                                max={5}
+                                value={score}
+                                onChange={onScoreChange}
+                                className="w-20 text-center text-lg font-semibold h-11"
+                                disabled={isSubmitting}
+                                aria-label="Session score"
+                            />
+                            <span className="text-2xl" aria-hidden>{getScoreEmoji(score)}</span>
                         </div>
                     </div>
 
                     <div>
-                        <label className="block mb-3 font-semibold text-foreground">
-                            🔋 How did it leave you feeling? (optional)
+                        <label className="block mb-3 text-sm font-semibold text-foreground">
+                            How did it leave you feeling? (optional)
                         </label>
                         <div className="flex gap-3">
                             {ENERGY_RATING_OPTIONS.map((option) => (
@@ -84,15 +79,15 @@ export function SessionSummaryModal({
                     </div>
 
                     <div>
-                        <label className="block mb-3 font-semibold text-foreground">
-                            📝 Notes (optional)
+                        <label className="block mb-3 text-sm font-semibold text-foreground">
+                            Notes (optional)
                         </label>
                         <textarea
                             value={notes}
                             onChange={onNotesChange}
                             rows={4}
                             placeholder="What helped you focus? Any distractions?"
-                            className="w-full rounded-lg border-2 border-input bg-transparent p-3 text-foreground disabled:opacity-50 disabled:cursor-not-allowed focus:border-ring focus:ring-2 focus:ring-ring/30 transition-all resize-none shadow-xs"
+                            className="w-full rounded-md border border-input bg-transparent p-3 text-sm text-foreground disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors resize-none"
                             disabled={isSubmitting}
                             aria-label="Session notes"
                         />
@@ -104,26 +99,16 @@ export function SessionSummaryModal({
                         variant="outline"
                         onClick={onCancel}
                         disabled={isSubmitting}
-                        className="flex-1 h-12 font-semibold border-2"
+                        className="flex-1 h-11 font-medium"
                     >
                         Cancel
                     </Button>
                     <Button
                         onClick={onSave}
                         disabled={isSubmitting}
-                        className="flex-1 h-12 font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                        className="flex-1 h-11 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
                     >
-                        {isSubmitting ? (
-                            <>
-                                <span className="animate-spin mr-2">⏳</span>
-                                Saving...
-                            </>
-                        ) : (
-                            <>
-                                <span className="mr-2">💾</span>
-                                Save Session
-                            </>
-                        )}
+                        {isSubmitting ? 'Saving…' : 'Save session'}
                     </Button>
                 </div>
             </div>

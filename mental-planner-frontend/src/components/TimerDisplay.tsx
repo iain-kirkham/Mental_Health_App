@@ -83,7 +83,7 @@ export function TimerDisplay({
                  )}
                  {isRunning && (
                     <div className="text-xs mt-3 text-muted-foreground font-medium">
-                        ⏱️ In progress...
+                        In progress
                     </div>
                  )}
              </div>

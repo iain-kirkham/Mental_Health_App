@@ -1,89 +1,65 @@
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Timer, LineChart, Brain, CalendarDays } from 'lucide-react';
+import { CalendarDays, LineChart, Timer } from 'lucide-react';
+import PageInset from '@/components/PageInset';
+
+const tools = [
+  {
+    href: '/planner',
+    icon: CalendarDays,
+    name: 'Planner',
+    description: 'Lay tasks across the week, drag them where they fit, break them into subtasks.',
+    cta: 'Open planner',
+  },
+  {
+    href: '/pomodoro',
+    icon: Timer,
+    name: 'Focus sessions',
+    description: 'Run a Pomodoro timer against a task, or just start one and see where it goes.',
+    cta: 'Start a session',
+  },
+  {
+    href: '/mood-tracker',
+    icon: LineChart,
+    name: 'Mood tracker',
+    description: "Log how you're doing and what's behind it, then watch the pattern over weeks.",
+    cta: 'Log your mood',
+  },
+];
 
 export default function Home() {
   return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-        <div className="container max-w-4xl mx-auto space-y-8">
-          <div className="text-center space-y-4">
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-              ADHD Focus Companion
-            </h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              A mental health toolkit designed <span className="font-semibold">with ADHD in mind</span>.
-              No rigid time-blocking. Just tools that work with your brain.
-            </p>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mt-12">
-            <Link href="/planner">
-              <Card className="hover:border-primary transition-colors cursor-pointer h-full flex flex-col">
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <CalendarDays className="h-6 w-6 text-primary" />
-                    <CardTitle>Planner</CardTitle>
-                  </div>
-                  <CardDescription>
-                    Plan your week with a flexible kanban board. Drag tasks between days and break them into subtasks.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="mt-auto">
-                  <Button variant="outline" className="w-full">Open Planner</Button>
-                </CardContent>
-              </Card>
-            </Link>
-
-            <Link href="/pomodoro">
-              <Card className="hover:border-primary transition-colors cursor-pointer h-full flex flex-col">
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <Timer className="h-6 w-6 text-primary" />
-                    <CardTitle>Pomodoro Timer</CardTitle>
-                  </div>
-                  <CardDescription>
-                    Manage hyperfocus sessions with customizable timers. Track and rate your productivity patterns.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="mt-auto">
-                  <Button variant="outline" className="w-full">Start Timer</Button>
-                </CardContent>
-              </Card>
-            </Link>
-
-            <Link href="/mood-tracker">
-              <Card className="hover:border-primary transition-colors cursor-pointer h-full flex flex-col">
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <LineChart className="h-6 w-6 text-primary" />
-                    <CardTitle>Mood Tracker</CardTitle>
-                  </div>
-                  <CardDescription>
-                    Log daily moods with customizable factors. Identify patterns and triggers over time.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="mt-auto">
-                  <Button variant="outline" className="w-full">Track Mood</Button>
-                </CardContent>
-              </Card>
-            </Link>
-          </div>
-
-          <div className="mt-12 text-center">
-            <Card className="bg-muted/50">
-              <CardHeader>
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <Brain className="h-6 w-6" />
-                  <CardTitle>Built for ADHD Brains</CardTitle>
-                </div>
-                <CardDescription className="text-base">
-                  This app is designed by an ADHDer for ADHDers. It focuses on flexibility and understanding rather than rigid structures, helping you work with your brain and not against it.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </div>
+    <main className="min-h-[calc(100vh-4rem)] bg-background py-16 sm:py-20">
+      <PageInset size="wide">
+        <div className="max-w-xl">
+          <h1 className="text-3xl font-semibold leading-tight tracking-tight text-foreground sm:text-4xl">
+            A calmer way to get through the day.
+          </h1>
+          <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+            Built for brains that don&apos;t do rigid time-blocking - flexible tools instead of a schedule that falls apart the moment something interrupts it.
+          </p>
         </div>
-      </main>
+
+        <div className="mt-14 divide-y divide-border border-t border-border">
+          {tools.map(({ href, icon: Icon, name, description, cta }) => (
+            <Link
+              key={href}
+              href={href}
+              className="group -mx-3 flex items-center gap-5 rounded-md px-3 py-6 transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:gap-6"
+            >
+              <Icon className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
+              <div className="min-w-0 flex-1">
+                <h2 className="text-base font-medium text-foreground">{name}</h2>
+                <p className="mt-0.5 max-w-md text-sm text-muted-foreground">{description}</p>
+              </div>
+              <span className="hidden shrink-0 text-sm font-medium text-primary sm:block">{cta}</span>
+            </Link>
+          ))}
+        </div>
+
+        <p className="mt-16 border-t border-border pt-6 text-sm text-muted-foreground/80">
+          Made by one ADHD brain, for others like it.
+        </p>
+      </PageInset>
+    </main>
   );
 }

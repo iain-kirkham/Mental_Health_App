@@ -10,7 +10,7 @@ import PageHeader from '@/components/PageHeader';
 export default function PomodoroHistoryPage() {
     return (
         <>
-            <PageHeader title="🍅 Session history">
+            <PageHeader title="Session history">
                 <Link href="/pomodoro">
                     <Button variant="ghost" size="sm">
                         <ArrowLeft className="mr-2 h-4 w-4" />

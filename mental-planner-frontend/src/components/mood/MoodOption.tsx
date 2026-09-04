@@ -16,18 +16,16 @@ export default function MoodOption<T>({ value, label, icon, colorClass, selected
   return (
     <Button
       variant="outline"
-      className={`flex flex-col items-center p-4 min-h-20 flex-1 transition-all duration-300 hover:scale-105 hover:shadow-md ${
-        selected ? `${colorClass} border-2 scale-110 shadow-lg` : "border-2 border-border hover:border-ring"
+      className={`flex flex-col items-center gap-2 p-4 min-h-20 flex-1 border-2 transition-colors duration-200 ${
+        selected ? colorClass : "border-border hover:border-ring"
       }`}
       onClick={() => onSelect(value)}
       aria-label={ariaLabel ?? `Select mood: ${label}`}
       aria-pressed={selected}
       disabled={disabled}
     >
-      <div className={`text-3xl transition-transform duration-300 ${selected ? "scale-125" : "scale-100 opacity-70"}`}>
-        {icon}
-      </div>
-      <span className={`text-xs mt-2 font-medium ${selected ? "font-bold" : ""}`}>{label}</span>
+      <div className={selected ? "" : "opacity-60"}>{icon}</div>
+      <span className={`text-xs ${selected ? "font-semibold" : "font-medium"}`}>{label}</span>
     </Button>
   );
 }

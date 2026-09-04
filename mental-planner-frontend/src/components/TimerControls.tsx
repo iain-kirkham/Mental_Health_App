@@ -26,12 +26,10 @@ export function TimerControls({
                 <div className="flex gap-2 md:gap-4 w-full" role="group" aria-label="Timer controls">
                     <Button
                         onClick={onStartPause}
-                        variant="outline"
+                        variant={isRunning ? "outline" : "default"}
                         size="lg"
-                        className={`flex-1 font-semibold text-sm md:text-base py-2 md:py-3 transition-all duration-300 shadow-md hover:shadow-lg ${
-                            isRunning
-                                ? "border-2 border-chart-3 text-chart-3 hover:bg-chart-3/10 bg-chart-3/5"
-                                : "border-2 border-chart-2 bg-chart-2 text-card hover:bg-chart-2/90"
+                        className={`flex-1 font-medium text-sm md:text-base py-2 md:py-3 transition-colors duration-200 ${
+                            isRunning ? "border-status-active/50 text-status-active hover:bg-status-active/10" : ""
                         }`}
                         aria-label={isRunning ? "Pause timer" : "Start timer"}
                     >
@@ -52,7 +50,7 @@ export function TimerControls({
                         onClick={onReset}
                         variant="outline"
                         size="lg"
-                        className="flex-1 font-semibold border-2 border-destructive text-destructive hover:bg-destructive/10 bg-destructive/5 transition-all duration-300 shadow-md hover:shadow-lg"
+                        className="flex-1 font-medium border-border text-muted-foreground hover:border-destructive/40 hover:text-destructive hover:bg-destructive/5 transition-colors duration-200"
                         aria-label="Reset timer"
                     >
                         <RefreshCw className="h-5 w-5 mr-2" aria-hidden="true" />
@@ -66,7 +64,7 @@ export function TimerControls({
                     htmlFor="timer-minutes-input"
                     className="block text-sm font-semibold mb-3 text-foreground"
                 >
-                    ⏲️ Set Duration (Minutes)
+                    Session length (minutes)
                 </label>
                 <Input
                     id="timer-minutes-input"

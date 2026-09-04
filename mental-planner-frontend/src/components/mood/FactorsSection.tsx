@@ -37,9 +37,9 @@ export default function FactorsSection({ factors, setFactors, newFactor, setNewF
   };
 
   return (
-    <div className="bg-muted/50 p-4 rounded-lg border border-border">
+    <div className="bg-muted/40 p-4 rounded-lg border border-border">
       <div className="flex justify-between items-center mb-3">
-        <h3 className="text-sm font-semibold text-foreground">🏷️ Contributing Factors</h3>
+        <h3 className="text-sm font-semibold text-foreground">Contributing factors</h3>
         <Button variant="ghost" size="sm" onClick={() => setShowFactorInput(!showFactorInput)} disabled={isSubmitting} aria-label="Add custom factor" className="h-8 w-8 p-0 hover:bg-accent">
           <Plus size={18} className={showFactorInput ? "rotate-45 transition-transform" : "transition-transform"} />
         </Button>
@@ -47,7 +47,7 @@ export default function FactorsSection({ factors, setFactors, newFactor, setNewF
 
       <div className="flex flex-wrap gap-2 mb-3">
         {COMMON_FACTORS.map(factor => (
-          <Badge key={factor} variant="outline" className={`cursor-pointer hover:bg-accent hover:border-ring transition-all duration-200 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''} ${factors.includes(factor) ? 'opacity-50' : ''}`} onClick={() => !isSubmitting && !factors.includes(factor) && setFactors([...factors, factor])}>
+          <Badge key={factor} variant="outline" className={`cursor-pointer hover:bg-accent hover:border-ring transition-colors duration-200 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''} ${factors.includes(factor) ? 'opacity-50' : ''}`} onClick={() => !isSubmitting && !factors.includes(factor) && setFactors([...factors, factor])}>
             {factor}
           </Badge>
         ))}
@@ -56,9 +56,9 @@ export default function FactorsSection({ factors, setFactors, newFactor, setNewF
       {factors.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-2 p-3 bg-card rounded-md border border-border">
           {factors.map(factor => (
-            <Badge key={factor} className="bg-primary text-primary-foreground flex items-center gap-1 px-3 py-1 hover:opacity-90 transition-all">
+            <Badge key={factor} className="bg-primary text-primary-foreground flex items-center gap-1 px-3 py-1 hover:opacity-90 transition-opacity">
               {factor}
-              <X size={14} className={`cursor-pointer hover:scale-110 transition-transform ${isSubmitting ? 'pointer-events-none' : ''}`} onClick={() => !isSubmitting && setFactors(factors.filter(f => f !== factor))} aria-label={`Remove ${factor}`} />
+              <X size={14} className={`cursor-pointer transition-opacity hover:opacity-70 ${isSubmitting ? 'pointer-events-none' : ''}`} onClick={() => !isSubmitting && setFactors(factors.filter(f => f !== factor))} aria-label={`Remove ${factor}`} />
             </Badge>
           ))}
         </div>
@@ -66,13 +66,13 @@ export default function FactorsSection({ factors, setFactors, newFactor, setNewF
 
       {showFactorInput && (
         <div className="flex gap-2 mt-3 animate-in slide-in-from-top duration-300">
-          <Input placeholder="Add custom factor..." value={newFactor} onChange={(e) => { setNewFactor(e.target.value); setAddError(undefined); }} onKeyDown={(e) => e.key === 'Enter' && handleAdd()} disabled={isSubmitting} aria-label="Custom factor name" className="border-2 focus:border-ring" />
+          <Input placeholder="Add custom factor..." value={newFactor} onChange={(e) => { setNewFactor(e.target.value); setAddError(undefined); }} onKeyDown={(e) => e.key === 'Enter' && handleAdd()} disabled={isSubmitting} aria-label="Custom factor name" />
           <Button size="sm" onClick={handleAdd} disabled={isSubmitting || !newFactor.trim()} aria-label="Add factor">
-            <X size={16} className="rotate-45" />
+            <Plus size={16} />
           </Button>
         </div>
       )}
-      {(addError || formErrors.newFactor) && <p className="text-sm text-red-600 mt-2">{addError || formErrors.newFactor}</p>}
+      {(addError || formErrors.newFactor) && <p className="text-sm text-destructive mt-2">{addError || formErrors.newFactor}</p>}
     </div>
   );
 }

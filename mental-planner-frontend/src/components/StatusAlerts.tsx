@@ -23,7 +23,7 @@ export default function StatusAlerts({
   errorMessage,
   showAlert,
   alertMessage,
-  successMessage = '🎉 Session saved successfully!',
+  successMessage = 'Saved.',
   errorFallback = 'Failed to save session. Please try again.',
   errorAction,
   className = 'mb-3',
@@ -31,9 +31,9 @@ export default function StatusAlerts({
   return (
     <>
       {submitStatus === 'success' && (
-        <Alert className={cn(className, 'bg-chart-2/10 border-chart-2/40 animate-in slide-in-from-top duration-300')}>
-          <CheckCircle2 className="h-4 w-4 text-chart-2" />
-          <AlertDescription className="text-chart-2 font-medium">{successMessage}</AlertDescription>
+        <Alert className={cn(className, 'bg-status-done/10 border-status-done/40 animate-in slide-in-from-top duration-300')}>
+          <CheckCircle2 className="h-4 w-4 text-status-done" />
+          <AlertDescription className="text-status-done font-medium">{successMessage}</AlertDescription>
         </Alert>
       )}
 
@@ -51,7 +51,7 @@ export default function StatusAlerts({
 
       {showAlert && (
         <Alert className={cn(className, 'bg-chart-3/10 border-chart-3/40 animate-in slide-in-from-top duration-500')}>
-          <AlertDescription className="text-chart-3 font-semibold text-center">{alertMessage ?? '⏰ Time\'s up! Great work! 🎯'}</AlertDescription>
+          <AlertDescription className="text-chart-3 font-semibold text-center">{alertMessage ?? "Time's up - nice work."}</AlertDescription>
         </Alert>
       )}
     </>
