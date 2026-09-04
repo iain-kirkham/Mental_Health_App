@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
-import { History, ListChecks, Pause, Pencil, Play, Plus, Timer as TimerIcon, Trash2, X, Zap } from 'lucide-react'
+import { Expand, History, ListChecks, Pause, Pencil, Play, Plus, Timer as TimerIcon, Trash2, X, Zap } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -30,6 +30,7 @@ interface TaskDetailModalProps {
   onToggleSubtask: (taskId: number, subtaskId: number, completed: boolean) => void
   onDeleteSubtask: (taskId: number, subtaskId: number) => void
   onUpdateSubtask: (taskId: number, subtaskId: number, changes: { title?: string; plannedMinutes?: number | null }) => void
+  onOpenFocus?: (task: TaskResponseDTO) => void
 }
 
 type TaskDetailFormProps = Omit<TaskDetailModalProps, 'open' | 'onOpenChange' | 'task'> & { task: TaskResponseDTO }
@@ -47,7 +48,7 @@ function formatLiveTime(totalSeconds: number) {
   return `${minutes}:${String(seconds).padStart(2, '0')}`
 }
 
-const CHECKED_GREEN = 'data-[state=checked]:bg-chart-2 data-[state=checked]:border-chart-2'
+const CHECKED_DONE = 'data-[state=checked]:bg-status-done data-[state=checked]:border-status-done'
 
 function DurationField({
   label,
@@ -75,7 +76,7 @@ function DurationField({
     <div className="flex flex-col items-end gap-0.5">
       <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
       {liveDisplay != null ? (
-        <span className="rounded-sm px-1 font-mono text-sm font-semibold tabular-nums text-chart-2">{liveDisplay}</span>
+        <span className="rounded-sm px-1 font-mono text-sm font-semibold tabular-nums text-status-active">{liveDisplay}</span>
       ) : editing ? (
         <Input
           type="number"
@@ -135,7 +136,7 @@ function SubtaskRow({
       <Checkbox
         checked={subtask.completed}
         onCheckedChange={(checked) => onToggle(checked === true)}
-        className={cn('h-4 w-4 rounded-full', CHECKED_GREEN)}
+        className={cn('h-4 w-4 rounded-full', CHECKED_DONE)}
       />
       <input
         defaultValue={subtask.title}
@@ -306,6 +307,7 @@ function TaskDetailForm({
   onToggleSubtask,
   onDeleteSubtask,
   onUpdateSubtask,
+  onOpenFocus,
 }: TaskDetailFormProps) {
   const activeTaskId = useTimerStore((state) => state.activeTaskId)
   const isRunning = useTimerStore((state) => state.isRunning)
@@ -397,6 +399,19 @@ function TaskDetailForm({
         )}
 
         <div className="flex items-center gap-1">
+          {onOpenFocus && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1.5 px-2 text-xs font-medium text-muted-foreground hover:text-lavender"
+              onClick={() => onOpenFocus(task)}
+            >
+              <Expand className="h-3.5 w-3.5" />
+              Focus
+            </Button>
+          )}
+
           <PriorityPicker value={task.priority} onChange={(priority) => onUpdate(task.id, { priority })} />
 
           <DatePickerButton value={task.scheduledDate} onChange={(dateKey) => onMoveDay(task.id, dateKey)} />
@@ -420,7 +435,7 @@ function TaskDetailForm({
           <Checkbox
             checked={task.completed}
             onCheckedChange={(checked) => onToggleComplete(task.id, checked === true)}
-            className={cn('h-6 w-6 rounded-full', CHECKED_GREEN)}
+            className={cn('h-6 w-6 rounded-full', CHECKED_DONE)}
           />
           <input
             value={title}
@@ -440,7 +455,7 @@ function TaskDetailForm({
             type="button"
             variant="ghost"
             size="icon"
-            className={cn('h-8 w-8 rounded-full', isTimerRunning && 'text-chart-2')}
+            className={cn('h-8 w-8 rounded-full', isTimerRunning && 'text-status-active')}
             onClick={() => (isTimerRunning ? pauseTimer() : startTimer(task.id, task.actualMinutes))}
             disabled={isCountdownRunningHere}
             aria-label={isCountdownRunningHere ? 'Focus session in progress' : isTimerRunning ? 'Pause timer' : 'Start timer'}
@@ -449,7 +464,7 @@ function TaskDetailForm({
           </Button>
           {isCountdownRunningHere ? (
             <div className="flex items-center gap-1.5">
-              <span className="font-mono text-sm font-semibold tabular-nums text-chart-2">
+              <span className="font-mono text-sm font-semibold tabular-nums text-status-active">
                 {countdownSecondsLeft != null ? formatLiveTime(countdownSecondsLeft) : null}
               </span>
               <Button
@@ -482,7 +497,7 @@ function TaskDetailForm({
                   onClick={() => setSelectedPreset(preset)}
                   className={cn(
                     'rounded-full px-2 py-0.5 font-mono text-xs tabular-nums',
-                    selectedPreset === preset ? 'bg-chart-2/20 text-chart-2' : 'text-muted-foreground hover:bg-muted/50'
+                    selectedPreset === preset ? 'bg-status-active/20 text-status-active' : 'text-muted-foreground hover:bg-muted/50'
                   )}
                 >
                   {preset}

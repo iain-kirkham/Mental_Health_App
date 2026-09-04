@@ -65,7 +65,7 @@ export default function MoodHistory() {
       </CardHeader>
       <CardContent className="space-y-4">
         {errorMessage ? (
-          <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-200">
+          <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
             {errorMessage}
           </p>
         ) : null}

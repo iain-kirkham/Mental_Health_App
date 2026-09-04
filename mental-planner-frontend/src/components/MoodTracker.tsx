@@ -149,7 +149,7 @@ export default function MoodTracker() {
 
     return (
         <>
-            <PageHeader title="💭 How are you feeling?">
+            <PageHeader title="How are you feeling?">
                 <Link href="/mood-tracker/history">
                     <Button variant="ghost" size="sm">
                         <BookOpen className="mr-2 h-4 w-4" />

@@ -41,6 +41,11 @@
 
     --color-overlay0: hsl(var(--overlay0));
 
+    --color-lavender: hsl(var(--lavender));
+    --color-status-done: hsl(var(--status-done));
+    --color-status-active: hsl(var(--status-active));
+    --color-status-high: hsl(var(--status-high));
+
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
     --radius-sm: calc(var(--radius) - 4px);
@@ -110,6 +115,11 @@
 
         --overlay0: 228 11% 65%;        /* Overlay0 */
 
+        --lavender: 231 97% 72%;        /* Lavender */
+        --status-done: 109 58% 40%;     /* Green */
+        --status-active: 220 91% 54%;   /* Blue */
+        --status-high: 347 87% 44%;     /* Red */
+
         --radius: 0.5rem
     }
     .dark {
@@ -164,6 +174,11 @@
         --chart-5: 170 57% 73%;         /* Teal */
 
         --overlay0: 231 11% 47%;        /* Overlay0 */
+
+        --lavender: 232 97% 85%;        /* Lavender */
+        --status-done: 115 54% 76%;     /* Green */
+        --status-active: 217 92% 76%;   /* Blue */
+        --status-high: 343 81% 75%;     /* Red */
     }
 }
 

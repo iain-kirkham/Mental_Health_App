@@ -20,6 +20,7 @@ interface DayColumnProps {
   onToggleSubtask: (taskId: number, subtaskId: number, completed: boolean) => void
   onAddSubtask: (taskId: number, title: string) => void
   onOpenDetail: (task: TaskResponseDTO) => void
+  onOpenFocus: (task: TaskResponseDTO) => void
 }
 
 interface SortableTaskCardProps {
@@ -28,6 +29,7 @@ interface SortableTaskCardProps {
   onToggleSubtask: (taskId: number, subtaskId: number, completed: boolean) => void
   onAddSubtask: (taskId: number, title: string) => void
   onOpenDetail: (task: TaskResponseDTO) => void
+  onOpenFocus: (task: TaskResponseDTO) => void
   dateKey: string
 }
 
@@ -70,6 +72,7 @@ export default function DayColumn({
   onToggleSubtask,
   onAddSubtask,
   onOpenDetail,
+  onOpenFocus,
 }: DayColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: dateKey })
   const today = isToday(date)
@@ -131,6 +134,7 @@ export default function DayColumn({
                 onToggleSubtask={onToggleSubtask}
                 onAddSubtask={onAddSubtask}
                 onOpenDetail={onOpenDetail}
+                onOpenFocus={onOpenFocus}
               />
             ))}
           </SortableContext>

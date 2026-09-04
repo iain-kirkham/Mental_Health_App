@@ -37,7 +37,7 @@ export default function MoodForm({ submitStatus, errorMessage, isSubmitting, sel
         submitStatus={submitStatus}
         errorMessage={errorMessage}
         className="mb-6 max-w-md lg:max-w-none mx-auto lg:mx-0"
-        successMessage="🎉 Mood entry saved successfully!"
+        successMessage="Mood entry saved."
         errorFallback="We couldn't save your mood entry — please try again."
         errorAction={<Button size="sm" variant="outline" onClick={handleSubmit} disabled={isSubmitting} aria-label="Retry save">Try again</Button>}
       />
@@ -51,7 +51,7 @@ export default function MoodForm({ submitStatus, errorMessage, isSubmitting, sel
           </div>
 
           <div className="border-b border-border pb-6">
-            <h3 className="text-sm font-semibold text-foreground mb-4">📅 When</h3>
+            <h3 className="text-sm font-semibold text-foreground mb-4">When</h3>
             <DateTimePickers date={date} setDate={setDate} time={time} setTime={setTime} isSubmitting={isSubmitting} formatDate={formatDate} />
             {(formErrors.date || formErrors.time) && (
               <div className="mt-2 space-y-1">
@@ -65,9 +65,9 @@ export default function MoodForm({ submitStatus, errorMessage, isSubmitting, sel
         </div>
 
         <div className="lg:border-l border-border lg:pl-6 flex flex-col">
-          <label className="text-sm font-semibold text-foreground mb-3 block">📝 Notes</label>
-          <Textarea placeholder="How are you feeling? What happened today?" value={notes} onChange={(e) => setNotes(e.target.value)} className="mt-1 min-h-[100px] lg:min-h-[240px] border-2 focus:border-ring transition-colors resize-none lg:flex-1" disabled={isSubmitting} aria-label="Mood notes" />
-          <Button className="mt-4 h-12 text-lg font-semibold hover:opacity-95 transition-all duration-200 disabled:opacity-50" onClick={handleSubmit} disabled={selectedMood === null || isSubmitting} aria-label="Save mood entry">{isSubmitting ? (<><span className="animate-spin mr-2">⏳</span>Saving...</>) : (<><span className="mr-2">💾</span>Save Mood Entry</>)}</Button>
+          <label className="text-sm font-semibold text-foreground mb-3 block">Notes</label>
+          <Textarea placeholder="How are you feeling? What happened today?" value={notes} onChange={(e) => setNotes(e.target.value)} className="mt-1 min-h-[100px] lg:min-h-[240px] resize-none lg:flex-1" disabled={isSubmitting} aria-label="Mood notes" />
+          <Button className="mt-4 h-11 font-medium disabled:opacity-50" onClick={handleSubmit} disabled={selectedMood === null || isSubmitting} aria-label="Save mood entry">{isSubmitting ? 'Saving…' : 'Save entry'}</Button>
         </div>
       </div>
     </div>
