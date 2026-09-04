@@ -1,11 +1,33 @@
 'use client'
 
+import { useDraggable } from '@dnd-kit/core'
 import { format } from 'date-fns'
 import { Plus } from 'lucide-react'
 import TaskCard from './TaskCard'
 import { Button } from '@/components/ui/button'
 import { useTimerStore } from '@/store/timerStore'
 import type { TaskResponseDTO } from '@/types'
+
+interface DraggableTaskCardProps {
+  task: TaskResponseDTO
+  onToggleComplete: (id: number, completed: boolean) => void
+  onToggleSubtask: (taskId: number, subtaskId: number, completed: boolean) => void
+  onAddSubtask: (taskId: number, title: string) => void
+  onOpenDetail: (task: TaskResponseDTO) => void
+  onOpenFocus: (task: TaskResponseDTO) => void
+}
+
+/** Drag out onto the TimelineGrid to time-box the task; a plain click still opens the detail
+ * modal since dnd-kit only starts a drag past the sensor's activation distance. */
+function DraggableTaskCard({ task, ...handlers }: DraggableTaskCardProps) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: `queue-${task.id}` })
+
+  return (
+    <div ref={setNodeRef} className={isDragging ? 'opacity-40' : undefined}>
+      <TaskCard task={task} dragHandleAttributes={attributes} dragHandleListeners={listeners} {...handlers} />
+    </div>
+  )
+}
 
 interface TodayColumnProps {
   date: Date
@@ -94,7 +116,7 @@ export default function TodayColumn({
           <p className="px-1 py-4 text-xs text-muted-foreground">Nothing scheduled for today.</p>
         ) : (
           tasks.map((task) => (
-            <TaskCard
+            <DraggableTaskCard
               key={task.id}
               task={task}
               onToggleComplete={onToggleComplete}

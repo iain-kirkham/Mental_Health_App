@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { addMinutes } from 'date-fns'
 import { Expand, History, ListChecks, Pause, Pencil, Play, Plus, Timer as TimerIcon, Trash2, X, Zap } from 'lucide-react'
 import {
   Dialog,
@@ -22,7 +23,19 @@ interface TaskDetailModalProps {
   task: TaskResponseDTO | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  onUpdate: (id: number, changes: { title?: string; description?: string | null; category?: string | null; plannedMinutes?: number | null; actualMinutes?: number; priority?: TaskPriority }) => void
+  onUpdate: (
+    id: number,
+    changes: {
+      title?: string
+      description?: string | null
+      category?: string | null
+      plannedMinutes?: number | null
+      actualMinutes?: number
+      priority?: TaskPriority
+      startTime?: string | null
+      endTime?: string | null
+    }
+  ) => void
   onMoveDay: (id: number, destDateKey: string) => void
   onDelete: (id: number) => void
   onToggleComplete: (id: number, completed: boolean) => void
@@ -327,7 +340,9 @@ function TaskDetailForm({
       ? Math.max(0, sessionLengthMinutes * 60 - elapsedSeconds)
       : null
 
-  const [selectedPreset, setSelectedPreset] = useState(30)
+  // TaskDetailForm remounts per task (key={task.id} below), so this only needs to read the
+  // card's planned time once, at mount - no keyed-state trick needed like the overlays above.
+  const [selectedPreset, setSelectedPreset] = useState(task.plannedMinutes && task.plannedMinutes > 0 ? task.plannedMinutes : 30)
 
   const [title, setTitle] = useState(task.title)
   const [description, setDescription] = useState(task.description ?? '')
@@ -524,7 +539,16 @@ function TaskDetailForm({
           <DurationField
             label="Planned"
             minutes={task.plannedMinutes ?? 0}
-            onSave={(minutes) => onUpdate(task.id, { plannedMinutes: minutes })}
+            onSave={(minutes) => {
+              // Already time-boxed on the timeline? Re-estimating here should resize that block
+              // too (keeping startTime fixed), so the grid never silently disagrees with the
+              // planned-time the user just typed in.
+              if (task.startTime) {
+                onUpdate(task.id, { plannedMinutes: minutes, endTime: addMinutes(new Date(task.startTime), minutes).toISOString() })
+              } else {
+                onUpdate(task.id, { plannedMinutes: minutes })
+              }
+            }}
           />
           <Button
             type="button"

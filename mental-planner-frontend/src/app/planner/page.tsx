@@ -11,7 +11,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
-import { addDays, addWeeks, format, isToday, parseISO, startOfWeek, subWeeks } from 'date-fns'
+import { addDays, addMinutes, addWeeks, differenceInMinutes, format, isToday, parseISO, startOfWeek, subWeeks } from 'date-fns'
 import { ChevronLeft, ChevronRight, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import DayColumn from '@/components/today/DayColumn'
@@ -22,7 +22,7 @@ import ExecutionModeOverlay from '@/components/today/ExecutionModeOverlay'
 import NewTaskModal from '@/components/today/NewTaskModal'
 import DatePickerButton from '@/components/today/DatePickerButton'
 import TodayColumn from '@/components/today/TodayColumn'
-import TimelineGrid from '@/components/today/TimelineGrid'
+import TimelineGrid, { GRID_HOURS, GRID_START_HOUR, HOUR_HEIGHT, TIMELINE_DROPPABLE_ID } from '@/components/today/TimelineGrid'
 import PageHeader from '@/components/PageHeader'
 import { cn } from '@/lib/utils'
 import useTasksForWeek from '@/hooks/useTasksForWeek'
@@ -73,6 +73,8 @@ export default function PlannerPage() {
   const [focusTaskId, setFocusTaskId] = useState<number | null>(null)
   const focusTask = tasks.find((task) => task.id === focusTaskId) ?? null
   const [executionModeOpen, setExecutionModeOpen] = useState(false)
+  const [executionInitialTaskId, setExecutionInitialTaskId] = useState<number | null>(null)
+  const [draggingTimelineTask, setDraggingTimelineTask] = useState<TaskResponseDTO | null>(null)
 
   const todayDateKey = toDateKey(new Date())
   const weekHasToday = weekDays.some((day) => isToday(day))
@@ -90,6 +92,20 @@ export default function PlannerPage() {
 
   const handleToggleComplete = (id: number, completed: boolean) => {
     void setTaskCompletion(id, completed)
+  }
+
+  // A single Focus entry point for the whole app: today's tasks open the redesigned Execution
+  // Mode overlay (queue + digital timer + subtasks/notes), landing directly on the task that was
+  // clicked. Other days don't have a "today's queue" to show, so they fall back to the older
+  // single-task focus overlay.
+  const handleOpenFocus = (task: TaskResponseDTO) => {
+    setSelectedTaskId(null)
+    if (task.scheduledDate === todayDateKey) {
+      setExecutionInitialTaskId(task.id)
+      setExecutionModeOpen(true)
+    } else {
+      setFocusTaskId(task.id)
+    }
   }
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -114,6 +130,73 @@ export default function PlannerPage() {
     const destIndex = overTaskIndex === -1 ? destColumn.length : overTaskIndex
 
     void moveTask(taskId, destDateKey, destIndex)
+  }
+
+  // Time-boxing on the Today view: dragging a task (from the queue, or an already-placed block
+  // being repositioned) onto the timeline grid sets its startTime/endTime from the drop position,
+  // snapped to 15-minute increments and clamped to the visible grid window. Dragging a block's
+  // resize handle instead stretches/shrinks endTime, keeping startTime fixed.
+  const handleTimelineDragStart = (event: DragStartEvent) => {
+    const idStr = String(event.active.id)
+    if (idStr.startsWith('resize-')) return
+    const taskId = Number(idStr.replace(/^(queue-|grid-)/, ''))
+    setDraggingTimelineTask(todayTasks.find((task) => task.id === taskId) ?? null)
+  }
+
+  const handleTimelineDragEnd = (event: DragEndEvent) => {
+    setDraggingTimelineTask(null)
+    const { active, over, delta } = event
+    const idStr = String(active.id)
+
+    if (idStr.startsWith('resize-')) {
+      const taskId = Number(idStr.slice('resize-'.length))
+      const task = todayTasks.find((t) => t.id === taskId)
+      if (!task || !task.startTime || !task.endTime) return
+
+      const start = new Date(task.startTime)
+      const currentDuration = Math.max(15, differenceInMinutes(new Date(task.endTime), start))
+      const deltaMinutes = Math.round(((delta.y / HOUR_HEIGHT) * 60) / 15) * 15
+      const startOffsetMinutes = (start.getHours() - GRID_START_HOUR) * 60 + start.getMinutes()
+      const maxDuration = GRID_HOURS * 60 - startOffsetMinutes
+      const newDuration = Math.min(maxDuration, Math.max(15, currentDuration + deltaMinutes))
+
+      // Stretching a block on the grid is the user re-estimating how long the task will take, so
+      // it feeds back into plannedMinutes - otherwise the card's planned/actual badge and the
+      // TodayColumn progress bar silently drift away from what the timeline actually shows.
+      void updateTask(taskId, { endTime: addMinutes(start, newDuration).toISOString(), plannedMinutes: newDuration })
+      return
+    }
+
+    if (!over || over.id !== TIMELINE_DROPPABLE_ID) return
+
+    const taskId = Number(idStr.replace(/^(queue-|grid-)/, ''))
+    const task = todayTasks.find((t) => t.id === taskId)
+    if (!task) return
+
+    const activeRect = active.rect.current.translated
+    if (!activeRect) return
+    const offsetPx = activeRect.top - over.rect.top
+
+    const durationMinutes =
+      task.startTime && task.endTime
+        ? Math.max(15, differenceInMinutes(new Date(task.endTime), new Date(task.startTime)))
+        : task.plannedMinutes ?? 30
+
+    const gridMinutes = GRID_HOURS * 60
+    let startOffsetMinutes = Math.round(((offsetPx / HOUR_HEIGHT) * 60) / 15) * 15
+    startOffsetMinutes = Math.max(0, Math.min(startOffsetMinutes, gridMinutes - durationMinutes))
+
+    const start = addMinutes(new Date(new Date().setHours(GRID_START_HOUR, 0, 0, 0)), startOffsetMinutes)
+    const end = addMinutes(start, durationMinutes)
+
+    // Scheduling a task with no estimate yet (durationMinutes fell back to the default 30m box)
+    // should also set plannedMinutes, so the box the user just drew *is* the estimate going
+    // forward, not just a visual guess that the rest of the app never learns about.
+    void updateTask(taskId, { startTime: start.toISOString(), endTime: end.toISOString(), plannedMinutes: durationMinutes })
+  }
+
+  const handleUnscheduleTask = (taskId: number) => {
+    void updateTask(taskId, { startTime: null, endTime: null })
   }
 
   return (
@@ -181,7 +264,10 @@ export default function PlannerPage() {
               variant="ghost"
               size="sm"
               className="ml-1 h-7 gap-1.5 px-2.5 text-xs text-primary hover:text-primary"
-              onClick={() => setExecutionModeOpen(true)}
+              onClick={() => {
+                setExecutionInitialTaskId(null)
+                setExecutionModeOpen(true)
+              }}
               disabled={!executionQueueOpen}
             >
               <Zap className="h-3.5 w-3.5" />
@@ -210,7 +296,7 @@ export default function PlannerPage() {
                       onToggleSubtask={(taskId, subtaskId, completed) => void updateSubtaskItem(taskId, subtaskId, { completed })}
                       onAddSubtask={(taskId, title) => void addSubtask(taskId, title)}
                       onOpenDetail={(task) => setSelectedTaskId(task.id)}
-                      onOpenFocus={(task) => setFocusTaskId(task.id)}
+                      onOpenFocus={handleOpenFocus}
                     />
                   )
                 })}
@@ -234,22 +320,38 @@ export default function PlannerPage() {
         </div>
       ) : (
         // Sunsama-style daily view: a single-day task column on the left, hourly time-blocking
-        // grid on the right for tasks that have a scheduled start/end time.
+        // grid on the right for tasks that have a scheduled start/end time. Dragging a task from
+        // the queue (or an already-placed block) onto the grid time-boxes it.
         <div className="flex min-h-0 flex-1 gap-4 px-3 py-3 md:px-4">
-          <div className="w-full max-w-sm shrink-0 border-r border-border pr-4">
-            <TodayColumn
+          <DndContext sensors={sensors} onDragStart={handleTimelineDragStart} onDragEnd={handleTimelineDragEnd}>
+            <div className="w-full max-w-sm shrink-0 border-r border-border pr-4">
+              <TodayColumn
+                date={new Date()}
+                tasks={todayTasks}
+                isLoading={isLoading}
+                onRequestAddTask={() => setAddTaskDateKey(todayDateKey)}
+                onToggleComplete={handleToggleComplete}
+                onToggleSubtask={(taskId, subtaskId, completed) => void updateSubtaskItem(taskId, subtaskId, { completed })}
+                onAddSubtask={(taskId, title) => void addSubtask(taskId, title)}
+                onOpenDetail={(task) => setSelectedTaskId(task.id)}
+                onOpenFocus={(task) => setFocusTaskId(task.id)}
+              />
+            </div>
+            <TimelineGrid
               date={new Date()}
               tasks={todayTasks}
-              isLoading={isLoading}
-              onRequestAddTask={() => setAddTaskDateKey(todayDateKey)}
-              onToggleComplete={handleToggleComplete}
-              onToggleSubtask={(taskId, subtaskId, completed) => void updateSubtaskItem(taskId, subtaskId, { completed })}
-              onAddSubtask={(taskId, title) => void addSubtask(taskId, title)}
               onOpenDetail={(task) => setSelectedTaskId(task.id)}
-              onOpenFocus={(task) => setFocusTaskId(task.id)}
+              onUnschedule={handleUnscheduleTask}
             />
-          </div>
-          <TimelineGrid date={new Date()} tasks={todayTasks} onOpenDetail={(task) => setSelectedTaskId(task.id)} />
+
+            <DragOverlay>
+              {draggingTimelineTask ? (
+                <div className="max-w-52 rounded-md border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground shadow-lg">
+                  {draggingTimelineTask.title || 'Untitled task'}
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
         </div>
       )}
 
@@ -270,10 +372,7 @@ export default function PlannerPage() {
         onToggleSubtask={(taskId, subtaskId, completed) => void updateSubtaskItem(taskId, subtaskId, { completed })}
         onDeleteSubtask={(taskId, subtaskId) => void removeSubtaskItem(taskId, subtaskId)}
         onUpdateSubtask={(taskId, subtaskId, changes) => void updateSubtaskItem(taskId, subtaskId, changes)}
-        onOpenFocus={(task) => {
-          setSelectedTaskId(null)
-          setFocusTaskId(task.id)
-        }}
+        onOpenFocus={handleOpenFocus}
       />
 
       <NewTaskModal
@@ -294,6 +393,7 @@ export default function PlannerPage() {
       <ExecutionModeOverlay
         open={executionModeOpen}
         tasks={todayTasks}
+        initialTaskId={executionInitialTaskId}
         onOpenChange={setExecutionModeOpen}
         onToggleComplete={handleToggleComplete}
         onToggleSubtask={(taskId, subtaskId, completed) => void updateSubtaskItem(taskId, subtaskId, { completed })}

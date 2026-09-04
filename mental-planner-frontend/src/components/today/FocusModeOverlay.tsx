@@ -25,7 +25,9 @@ export default function FocusModeOverlay({ task, onOpenChange }: FocusModeOverla
   const pauseTimer = useTimerStore((state) => state.pauseTimer)
   const cancelTimer = useTimerStore((state) => state.cancelTimer)
 
-  const [selectedPreset, setSelectedPreset] = useState(25)
+  // Keyed by task id since this overlay stays mounted across different tasks (task changes via
+  // prop, no remount) - a bare useState would leak the previous task's manual choice forward.
+  const [manualPreset, setManualPreset] = useState<{ taskId: number; minutes: number } | null>(null)
 
   const isThisTask = task !== null && activeTaskId === task.id && timerMode === 'countdown'
   const hasSession = isThisTask && sessionLengthMinutes !== null
@@ -43,6 +45,10 @@ export default function FocusModeOverlay({ task, onOpenChange }: FocusModeOverla
   }, [hasSession, onOpenChange])
 
   if (!task) return null
+
+  // Defaults the session length to the card's own planned time instead of a flat 25m.
+  const defaultMinutes = task.plannedMinutes && task.plannedMinutes > 0 ? task.plannedMinutes : 25
+  const selectedPreset = manualPreset && manualPreset.taskId === task.id ? manualPreset.minutes : defaultMinutes
 
   const totalTime = hasSession ? sessionLengthMinutes * 60 : selectedPreset * 60
   const timeLeft = hasSession ? Math.max(0, totalTime - elapsedSeconds) : totalTime
@@ -90,7 +96,7 @@ export default function FocusModeOverlay({ task, onOpenChange }: FocusModeOverla
                   <button
                     key={minutes}
                     type="button"
-                    onClick={() => setSelectedPreset(minutes)}
+                    onClick={() => setManualPreset({ taskId: task.id, minutes })}
                     className={cn(
                       'rounded-full px-4 py-1.5 font-mono text-sm tabular-nums transition-colors',
                       selectedPreset === minutes

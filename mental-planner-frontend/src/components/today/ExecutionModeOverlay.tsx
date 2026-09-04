@@ -17,6 +17,9 @@ interface ExecutionModeOverlayProps {
   /** Today's full task list (completed included) - the left queue shows all of it, checking off
    * completed ones, while the center stage and keyboard cycling only ever land on open tasks. */
   tasks: TaskResponseDTO[]
+  /** Task to land on when the overlay opens (e.g. a per-task "Focus" button), instead of
+   * defaulting to the first open task in the queue. */
+  initialTaskId?: number | null
   onOpenChange: (open: boolean) => void
   onToggleComplete: (id: number, completed: boolean) => void
   onToggleSubtask?: (taskId: number, subtaskId: number, completed: boolean) => void
@@ -34,6 +37,7 @@ function formatDigitalTime(totalSeconds: number) {
 export default function ExecutionModeOverlay({
   open,
   tasks,
+  initialTaskId = null,
   onOpenChange,
   onToggleComplete,
   onToggleSubtask,
@@ -49,14 +53,28 @@ export default function ExecutionModeOverlay({
   const pauseTimer = useTimerStore((state) => state.pauseTimer)
   const cancelTimer = useTimerStore((state) => state.cancelTimer)
 
-  const [selectedPreset, setSelectedPreset] = useState(25)
-  const [customMinutesInput, setCustomMinutesInput] = useState('')
+  // Keyed by task id (like notesDraft below) rather than a plain useState, since this overlay
+  // stays mounted across the whole queue - a bare useState would leak the previous task's manual
+  // preset choice onto the next one instead of resetting to its own planned time.
+  const [manualPreset, setManualPreset] = useState<{ taskId: number; minutes: number } | null>(null)
+  const [customDraft, setCustomDraft] = useState<{ taskId: number; text: string } | null>(null)
   const [requestedTaskId, setRequestedTaskId] = useState<number | null>(null)
   const [celebrating, setCelebrating] = useState(false)
   const [panelCollapsed, setPanelCollapsed] = useState(false)
   const [addingSubtask, setAddingSubtask] = useState(false)
   const [subtaskTitle, setSubtaskTitle] = useState('')
   const [notesDraft, setNotesDraft] = useState<{ taskId: number; value: string } | null>(null)
+
+  // The dialog stays mounted (open is just a prop), so the queue pointer must be re-seeded from
+  // initialTaskId each time it opens - otherwise opening on task A, closing, then opening on task
+  // B via its own "Focus" button would still land on wherever task A left the pointer. Tracked via
+  // the react.dev "adjusting state when a prop changes" pattern (state, not a ref, so the
+  // compiler-aware lint allows reading it during render).
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (open && requestedTaskId !== initialTaskId) setRequestedTaskId(initialTaskId)
+  }
 
   const openTasks = tasks.filter((t) => !t.completed)
 
@@ -70,6 +88,13 @@ export default function ExecutionModeOverlay({
 
   const currentIndex = openTasks.findIndex((t) => t.id === currentTaskId)
   const task = currentIndex >= 0 ? openTasks[currentIndex] : null
+
+  // Defaults the session length to the card's own planned time, so a task estimated at 45m
+  // starts a 45m focus session instead of always defaulting to the generic 25m preset.
+  const defaultMinutes = task?.plannedMinutes && task.plannedMinutes > 0 ? task.plannedMinutes : 25
+  const selectedPreset =
+    manualPreset && task && manualPreset.taskId === task.id ? manualPreset.minutes : defaultMinutes
+  const customMinutesInput = customDraft && task && customDraft.taskId === task.id ? customDraft.text : ''
 
   const isThisTask = task !== null && activeTaskId === task.id && timerMode === 'countdown'
   const hasSession = isThisTask && sessionLengthMinutes !== null
@@ -353,8 +378,9 @@ export default function ExecutionModeOverlay({
                           key={minutes}
                           type="button"
                           onClick={() => {
-                            setSelectedPreset(minutes)
-                            setCustomMinutesInput('')
+                            if (!task) return
+                            setManualPreset({ taskId: task.id, minutes })
+                            setCustomDraft(null)
                           }}
                           className={cn(
                             'rounded-full px-2.5 py-1 font-mono text-xs tabular-nums transition-colors',
@@ -371,10 +397,11 @@ export default function ExecutionModeOverlay({
                         inputMode="numeric"
                         value={customMinutesInput}
                         onChange={(event) => {
+                          if (!task) return
                           const digitsOnly = event.target.value.replace(/\D/g, '').slice(0, 3)
-                          setCustomMinutesInput(digitsOnly)
+                          setCustomDraft({ taskId: task.id, text: digitsOnly })
                           const parsed = Number(digitsOnly)
-                          if (parsed > 0) setSelectedPreset(Math.min(parsed, 300))
+                          if (parsed > 0) setManualPreset({ taskId: task.id, minutes: Math.min(parsed, 300) })
                         }}
                         placeholder="custom"
                         aria-label="Custom session length in minutes"
