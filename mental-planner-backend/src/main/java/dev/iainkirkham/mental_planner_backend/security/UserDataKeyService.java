@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.crypto.SecretKey;
+import java.util.Arrays;
 
 /**
  * Gets or creates the per-user data encryption key (DEK) used to encrypt that user's
@@ -68,6 +69,12 @@ public class UserDataKeyService {
 
     private SecretKey unwrap(String wrappedDek) {
         byte[] rawKey = encryptionService.decryptToBytes(wrappedDek, masterKeyProvider.getMasterKey());
-        return encryptionService.toKey(rawKey);
+        try {
+            // toKey()/SecretKeySpec clones rawKey internally, so zeroing our copy afterward
+            // doesn't affect the returned key - see EncryptionService.generateKey().
+            return encryptionService.toKey(rawKey);
+        } finally {
+            Arrays.fill(rawKey, (byte) 0);
+        }
     }
 }

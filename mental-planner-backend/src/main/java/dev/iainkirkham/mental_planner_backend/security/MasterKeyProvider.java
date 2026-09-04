@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+import java.util.Arrays;
 import java.util.Base64;
 
 /**
@@ -47,6 +48,12 @@ public class MasterKeyProvider {
                     "APP_MASTER_KEY must decode to exactly " + REQUIRED_KEY_LENGTH_BYTES +
                     " bytes (a 256-bit AES key), got " + keyBytes.length);
         }
-        return new SecretKeySpec(keyBytes, "AES");
+        try {
+            // SecretKeySpec clones keyBytes internally, so zeroing our copy afterward doesn't
+            // affect the returned key - see EncryptionService.generateKey().
+            return new SecretKeySpec(keyBytes, "AES");
+        } finally {
+            Arrays.fill(keyBytes, (byte) 0);
+        }
     }
 }

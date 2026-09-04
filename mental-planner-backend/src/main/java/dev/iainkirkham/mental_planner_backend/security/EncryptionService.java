@@ -18,11 +18,21 @@ import java.util.Base64;
  * application master key, and (once wired into entity converters) to encrypt field values
  * with a user's data key.
  * <p>
- * Output format is base64(IV || ciphertext || authTag), with a fresh random 96-bit IV
- * generated on every call - callers must never reuse an IV with the same key.
+ * Output format is {@code "v1:" + base64(IV || ciphertext || authTag)}, with a fresh random
+ * 96-bit IV generated on every call - callers must never reuse an IV with the same key. The
+ * {@code v1:} prefix is a format marker, not a secret: it lets callers (e.g. the backfill
+ * runner) tell already-encrypted values apart from legacy plaintext without attempting a
+ * decrypt, and gives future algorithm/format changes a version to branch on.
  */
 @Service
 public class EncryptionService {
+
+    /**
+     * Marks a stored value as ciphertext produced by this class, distinguishing it from
+     * legacy plaintext left over from before field encryption was introduced. See
+     * {@link #isEncrypted(String)}.
+     */
+    public static final String CIPHERTEXT_PREFIX = "v1:";
 
     private static final String CIPHER_TRANSFORMATION = "AES/GCM/NoPadding";
     private static final String KEY_ALGORITHM = "AES";
@@ -43,9 +53,16 @@ public class EncryptionService {
 
             ByteBuffer buffer = ByteBuffer.allocate(iv.length + ciphertextAndTag.length);
             buffer.put(iv).put(ciphertextAndTag);
-            return Base64.getEncoder().encodeToString(buffer.array());
+            return CIPHERTEXT_PREFIX + Base64.getEncoder().encodeToString(buffer.array());
         } catch (GeneralSecurityException e) {
             throw new EncryptionException("Failed to encrypt value", e);
+        } finally {
+            // Best-effort key hygiene: the caller's plaintext copy (e.g. a raw data key, or a
+            // String's throwaway UTF-8 bytes) is never needed again after this call: overwrite
+            // it rather than leaving it to linger on the heap until GC reclaims it. This does
+            // NOT zero the original String, if the caller had one - Java Strings are immutable
+            // and can't be wiped; see docs/security/data-at-rest-encryption-plan.md.
+            Arrays.fill(plaintext, (byte) 0);
         }
     }
 
@@ -53,8 +70,21 @@ public class EncryptionService {
         return encrypt(plaintext.getBytes(StandardCharsets.UTF_8), key);
     }
 
+    /**
+     * True if {@code value} looks like ciphertext produced by {@link #encrypt}, false for
+     * null or legacy plaintext. Used to skip already-encrypted rows during backfill without
+     * needing to attempt (and catch a failed) decrypt.
+     */
+    public boolean isEncrypted(String value) {
+        return value != null && value.startsWith(CIPHERTEXT_PREFIX);
+    }
+
     public byte[] decryptToBytes(String encoded, SecretKey key) {
-        byte[] decoded = Base64.getDecoder().decode(encoded);
+        if (!isEncrypted(encoded)) {
+            throw new EncryptionException(
+                    "Value is not in the expected \"" + CIPHERTEXT_PREFIX + "\"-prefixed ciphertext format", null);
+        }
+        byte[] decoded = Base64.getDecoder().decode(encoded.substring(CIPHERTEXT_PREFIX.length()));
         if (decoded.length < GCM_IV_LENGTH_BYTES) {
             throw new EncryptionException("Ciphertext too short to contain an IV", null);
         }

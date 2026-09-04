@@ -60,10 +60,11 @@ class EncryptionServiceTest {
     void decrypt_withTamperedCiphertext_throws() {
         SecretKey key = encryptionService.generateKey();
         String ciphertext = encryptionService.encrypt("sensitive value", key);
+        String encoded = ciphertext.substring(EncryptionService.CIPHERTEXT_PREFIX.length());
 
-        byte[] raw = Base64.getDecoder().decode(ciphertext);
+        byte[] raw = Base64.getDecoder().decode(encoded);
         raw[raw.length - 1] ^= (byte) 0xFF; // flip the last byte of the auth tag
-        String tampered = Base64.getEncoder().encodeToString(raw);
+        String tampered = EncryptionService.CIPHERTEXT_PREFIX + Base64.getEncoder().encodeToString(raw);
 
         assertThatThrownBy(() -> encryptionService.decrypt(tampered, key))
                 .isInstanceOf(EncryptionException.class);
@@ -75,5 +76,23 @@ class EncryptionServiceTest {
 
         assertThat(key.getAlgorithm()).isEqualTo("AES");
         assertThat(key.getEncoded()).hasSize(32);
+    }
+
+    @Test
+    void isEncrypted_distinguishesCiphertextFromLegacyPlaintextAndNull() {
+        SecretKey key = encryptionService.generateKey();
+        String ciphertext = encryptionService.encrypt("some value", key);
+
+        assertThat(encryptionService.isEncrypted(ciphertext)).isTrue();
+        assertThat(encryptionService.isEncrypted("plain legacy text")).isFalse();
+        assertThat(encryptionService.isEncrypted(null)).isFalse();
+    }
+
+    @Test
+    void decrypt_onLegacyPlaintextValue_throwsInsteadOfMisinterpretingIt() {
+        SecretKey key = encryptionService.generateKey();
+
+        assertThatThrownBy(() -> encryptionService.decrypt("legacy unencrypted title", key))
+                .isInstanceOf(EncryptionException.class);
     }
 }
