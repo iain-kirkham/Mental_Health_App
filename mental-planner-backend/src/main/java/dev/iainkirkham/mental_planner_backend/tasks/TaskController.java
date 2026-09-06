@@ -2,13 +2,9 @@ package dev.iainkirkham.mental_planner_backend.tasks;
 
 import dev.iainkirkham.mental_planner_backend.tasks.dto.ActualMinutesRequestDTO;
 import dev.iainkirkham.mental_planner_backend.tasks.dto.CompletionRequestDTO;
-import dev.iainkirkham.mental_planner_backend.tasks.dto.SubtaskRequestDTO;
-import dev.iainkirkham.mental_planner_backend.tasks.dto.SubtaskResponseDTO;
 import dev.iainkirkham.mental_planner_backend.tasks.dto.TaskReorderItemDTO;
 import dev.iainkirkham.mental_planner_backend.tasks.dto.TaskRequestDTO;
 import dev.iainkirkham.mental_planner_backend.tasks.dto.TaskResponseDTO;
-import dev.iainkirkham.mental_planner_backend.tasks.dto.TaskTimeEntryRequestDTO;
-import dev.iainkirkham.mental_planner_backend.tasks.dto.TaskTimeEntryResponseDTO;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -162,89 +158,5 @@ public class TaskController {
     public ResponseEntity<TaskResponseDTO> archiveTask(@PathVariable Long id) {
         TaskResponseDTO archived = taskService.archiveTask(id);
         return ResponseEntity.ok(archived);
-    }
-
-    /**
-     * Creates a new subtask under a task.
-     *
-     * @param taskId the ID of the parent task
-     * @param requestDTO the data for the new subtask
-     * @return the created subtask with status 201 (Created)
-     */
-    @PostMapping("/{taskId}/subtasks")
-    public ResponseEntity<SubtaskResponseDTO> createSubtask(
-            @PathVariable Long taskId, @RequestBody @Valid SubtaskRequestDTO requestDTO) {
-        SubtaskResponseDTO created = taskService.createSubtask(taskId, requestDTO);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
-    }
-
-    /**
-     * Updates a subtask, e.g. renaming it or toggling completion.
-     *
-     * @param taskId the ID of the parent task
-     * @param subtaskId the ID of the subtask to update
-     * @param requestDTO the updated subtask data
-     * @return the updated subtask with status 200 (OK)
-     */
-    @PutMapping("/{taskId}/subtasks/{subtaskId}")
-    public ResponseEntity<SubtaskResponseDTO> updateSubtask(
-            @PathVariable Long taskId, @PathVariable Long subtaskId, @RequestBody @Valid SubtaskRequestDTO requestDTO) {
-        SubtaskResponseDTO updated = taskService.updateSubtask(taskId, subtaskId, requestDTO);
-        return ResponseEntity.ok(updated);
-    }
-
-    /**
-     * Deletes a subtask.
-     *
-     * @param taskId the ID of the parent task
-     * @param subtaskId the ID of the subtask to delete
-     * @return status 204 (No Content)
-     */
-    @DeleteMapping("/{taskId}/subtasks/{subtaskId}")
-    public ResponseEntity<Void> deleteSubtask(@PathVariable Long taskId, @PathVariable Long subtaskId) {
-        taskService.deleteSubtask(taskId, subtaskId);
-        return ResponseEntity.noContent().build();
-    }
-
-    /**
-     * Retrieves all time entries logged against a task.
-     *
-     * @param taskId the ID of the parent task
-     * @return list of time entries with status 200 (OK), or 204 (No Content) if empty
-     */
-    @GetMapping("/{taskId}/time-entries")
-    public ResponseEntity<List<TaskTimeEntryResponseDTO>> getTimeEntries(@PathVariable Long taskId) {
-        List<TaskTimeEntryResponseDTO> entries = taskService.getTimeEntries(taskId);
-        if (entries.isEmpty()) {
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.ok(entries);
-    }
-
-    /**
-     * Logs a time entry against a task, either a completed stopwatch run or a manual entry.
-     *
-     * @param taskId the ID of the parent task
-     * @param requestDTO the time entry to log
-     * @return the created time entry with status 201 (Created)
-     */
-    @PostMapping("/{taskId}/time-entries")
-    public ResponseEntity<TaskTimeEntryResponseDTO> logTimeEntry(
-            @PathVariable Long taskId, @RequestBody @Valid TaskTimeEntryRequestDTO requestDTO) {
-        TaskTimeEntryResponseDTO created = taskService.logTimeEntry(taskId, requestDTO);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
-    }
-
-    /**
-     * Deletes a time entry.
-     *
-     * @param taskId the ID of the parent task
-     * @param entryId the ID of the time entry to delete
-     * @return status 204 (No Content)
-     */
-    @DeleteMapping("/{taskId}/time-entries/{entryId}")
-    public ResponseEntity<Void> deleteTimeEntry(@PathVariable Long taskId, @PathVariable Long entryId) {
-        taskService.deleteTimeEntry(taskId, entryId);
-        return ResponseEntity.noContent().build();
     }
 }

@@ -1,15 +1,12 @@
 package dev.iainkirkham.mental_planner_backend.tasks;
 
 import dev.iainkirkham.mental_planner_backend.exception.ResourceNotFoundException;
+import dev.iainkirkham.mental_planner_backend.subtasks.dto.SubtaskResponseDTO;
 import dev.iainkirkham.mental_planner_backend.tasks.dto.ActualMinutesRequestDTO;
 import dev.iainkirkham.mental_planner_backend.tasks.dto.CompletionRequestDTO;
-import dev.iainkirkham.mental_planner_backend.tasks.dto.SubtaskRequestDTO;
-import dev.iainkirkham.mental_planner_backend.tasks.dto.SubtaskResponseDTO;
 import dev.iainkirkham.mental_planner_backend.tasks.dto.TaskReorderItemDTO;
 import dev.iainkirkham.mental_planner_backend.tasks.dto.TaskRequestDTO;
 import dev.iainkirkham.mental_planner_backend.tasks.dto.TaskResponseDTO;
-import dev.iainkirkham.mental_planner_backend.tasks.dto.TaskTimeEntryRequestDTO;
-import dev.iainkirkham.mental_planner_backend.tasks.dto.TaskTimeEntryResponseDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -272,158 +269,5 @@ class TaskControllerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().isArchived()).isTrue();
         verify(taskService).archiveTask(1L);
-    }
-
-    @Test
-    void createSubtask_ShouldReturnCreatedSubtask() {
-        SubtaskRequestDTO requestDTO = new SubtaskRequestDTO();
-        requestDTO.setTitle("Draft outline");
-
-        SubtaskResponseDTO created = new SubtaskResponseDTO();
-        created.setId(10L);
-        created.setTaskId(1L);
-        created.setTitle("Draft outline");
-        when(taskService.createSubtask(1L, requestDTO)).thenReturn(created);
-
-        ResponseEntity<SubtaskResponseDTO> response = taskController.createSubtask(1L, requestDTO);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(response.getBody())
-                .isNotNull()
-                .usingRecursiveComparison()
-                .isEqualTo(created);
-        verify(taskService).createSubtask(1L, requestDTO);
-    }
-
-    @Test
-    void createSubtask_ShouldReturnNotFoundWhenParentTaskNotOwned() {
-        SubtaskRequestDTO requestDTO = new SubtaskRequestDTO();
-        requestDTO.setTitle("Draft outline");
-        when(taskService.createSubtask(anyLong(), any(SubtaskRequestDTO.class)))
-                .thenThrow(new ResourceNotFoundException("Task not found with ID: 99"));
-
-        assertThrows(ResourceNotFoundException.class, () -> taskController.createSubtask(99L, requestDTO));
-    }
-
-    @Test
-    void updateSubtask_ShouldReturnUpdatedSubtask() {
-        SubtaskRequestDTO requestDTO = new SubtaskRequestDTO();
-        requestDTO.setTitle("Renamed");
-        requestDTO.setCompleted(true);
-
-        SubtaskResponseDTO updated = new SubtaskResponseDTO();
-        updated.setId(10L);
-        updated.setTaskId(1L);
-        updated.setTitle("Renamed");
-        updated.setCompleted(true);
-        when(taskService.updateSubtask(1L, 10L, requestDTO)).thenReturn(updated);
-
-        ResponseEntity<SubtaskResponseDTO> response = taskController.updateSubtask(1L, 10L, requestDTO);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody())
-                .isNotNull()
-                .usingRecursiveComparison()
-                .isEqualTo(updated);
-        verify(taskService).updateSubtask(1L, 10L, requestDTO);
-    }
-
-    @Test
-    void deleteSubtask_ShouldReturnNoContentWhenFound() {
-        doNothing().when(taskService).deleteSubtask(1L, 10L);
-
-        ResponseEntity<Void> response = taskController.deleteSubtask(1L, 10L);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
-        verify(taskService).deleteSubtask(1L, 10L);
-    }
-
-    @Test
-    void deleteSubtask_ShouldReturnNotFoundWhenNotFound() {
-        doThrow(new ResourceNotFoundException("Subtask not found"))
-                .when(taskService).deleteSubtask(1L, 99L);
-
-        assertThrows(ResourceNotFoundException.class, () -> taskController.deleteSubtask(1L, 99L));
-    }
-
-    @Test
-    void getTimeEntries_ShouldReturnEntriesWhenPresent() {
-        TaskTimeEntryResponseDTO entry = new TaskTimeEntryResponseDTO();
-        entry.setId(1L);
-        entry.setTaskId(1L);
-        entry.setMinutes(30);
-        entry.setEntryDate(FIXED_DATE);
-        entry.setSource(TimeEntrySource.STOPWATCH);
-        when(taskService.getTimeEntries(1L)).thenReturn(List.of(entry));
-
-        ResponseEntity<List<TaskTimeEntryResponseDTO>> response = taskController.getTimeEntries(1L);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).hasSize(1);
-        verify(taskService).getTimeEntries(1L);
-    }
-
-    @Test
-    void getTimeEntries_ShouldReturnNoContentWhenEmpty() {
-        when(taskService.getTimeEntries(1L)).thenReturn(List.of());
-
-        ResponseEntity<List<TaskTimeEntryResponseDTO>> response = taskController.getTimeEntries(1L);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
-    }
-
-    @Test
-    void logTimeEntry_ShouldReturnCreatedEntry() {
-        TaskTimeEntryRequestDTO requestDTO = new TaskTimeEntryRequestDTO();
-        requestDTO.setMinutes(20);
-        requestDTO.setEntryDate(FIXED_DATE);
-        requestDTO.setSource(TimeEntrySource.MANUAL);
-
-        TaskTimeEntryResponseDTO created = new TaskTimeEntryResponseDTO();
-        created.setId(1L);
-        created.setTaskId(1L);
-        created.setMinutes(20);
-        created.setEntryDate(FIXED_DATE);
-        created.setSource(TimeEntrySource.MANUAL);
-        when(taskService.logTimeEntry(1L, requestDTO)).thenReturn(created);
-
-        ResponseEntity<TaskTimeEntryResponseDTO> response = taskController.logTimeEntry(1L, requestDTO);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(response.getBody())
-                .isNotNull()
-                .usingRecursiveComparison()
-                .isEqualTo(created);
-        verify(taskService).logTimeEntry(1L, requestDTO);
-    }
-
-    @Test
-    void logTimeEntry_ShouldReturnNotFoundWhenTaskNotOwned() {
-        TaskTimeEntryRequestDTO requestDTO = new TaskTimeEntryRequestDTO();
-        requestDTO.setMinutes(20);
-        requestDTO.setEntryDate(FIXED_DATE);
-        requestDTO.setSource(TimeEntrySource.MANUAL);
-        when(taskService.logTimeEntry(anyLong(), any(TaskTimeEntryRequestDTO.class)))
-                .thenThrow(new ResourceNotFoundException("Task not found with ID: 99"));
-
-        assertThrows(ResourceNotFoundException.class, () -> taskController.logTimeEntry(99L, requestDTO));
-    }
-
-    @Test
-    void deleteTimeEntry_ShouldReturnNoContentWhenFound() {
-        doNothing().when(taskService).deleteTimeEntry(1L, 10L);
-
-        ResponseEntity<Void> response = taskController.deleteTimeEntry(1L, 10L);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
-        verify(taskService).deleteTimeEntry(1L, 10L);
-    }
-
-    @Test
-    void deleteTimeEntry_ShouldReturnNotFoundWhenNotFound() {
-        doThrow(new ResourceNotFoundException("Time entry not found"))
-                .when(taskService).deleteTimeEntry(1L, 99L);
-
-        assertThrows(ResourceNotFoundException.class, () -> taskController.deleteTimeEntry(1L, 99L));
     }
 }

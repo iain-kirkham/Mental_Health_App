@@ -1,6 +1,7 @@
 package dev.iainkirkham.mental_planner_backend.tasks;
 
 import dev.iainkirkham.mental_planner_backend.security.EncryptedStringConverter;
+import dev.iainkirkham.mental_planner_backend.timeentries.TaskTimeEntry;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;

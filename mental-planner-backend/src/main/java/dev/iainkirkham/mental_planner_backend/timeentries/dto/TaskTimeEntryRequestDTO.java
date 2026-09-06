@@ -1,6 +1,6 @@
-package dev.iainkirkham.mental_planner_backend.tasks.dto;
+package dev.iainkirkham.mental_planner_backend.timeentries.dto;
 
-import dev.iainkirkham.mental_planner_backend.tasks.TimeEntrySource;
+import dev.iainkirkham.mental_planner_backend.timeentries.TimeEntrySource;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;

@@ -1,4 +1,4 @@
-package dev.iainkirkham.mental_planner_backend.tasks;
+package dev.iainkirkham.mental_planner_backend.timeentries;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 

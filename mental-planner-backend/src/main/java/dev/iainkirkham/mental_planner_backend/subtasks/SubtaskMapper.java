@@ -1,7 +1,7 @@
-package dev.iainkirkham.mental_planner_backend.tasks;
+package dev.iainkirkham.mental_planner_backend.subtasks;
 
-import dev.iainkirkham.mental_planner_backend.tasks.dto.SubtaskRequestDTO;
-import dev.iainkirkham.mental_planner_backend.tasks.dto.SubtaskResponseDTO;
+import dev.iainkirkham.mental_planner_backend.subtasks.dto.SubtaskRequestDTO;
+import dev.iainkirkham.mental_planner_backend.subtasks.dto.SubtaskResponseDTO;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

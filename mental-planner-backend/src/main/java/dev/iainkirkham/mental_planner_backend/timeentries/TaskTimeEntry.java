@@ -1,4 +1,4 @@
-package dev.iainkirkham.mental_planner_backend.tasks;
+package dev.iainkirkham.mental_planner_backend.timeentries;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
