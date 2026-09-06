@@ -99,6 +99,8 @@ public class Task {
 
     /**
      * How urgently this task needs attention, shown as a colored marker on the card.
+     * Never null - {@link #setPriority} defaults a null argument to {@code NORMAL}, since
+     * priority is optional on the client's request DTO.
      */
     @Enumerated(EnumType.STRING)
     @Column(name = "priority", nullable = false, length = 10)
@@ -142,5 +144,13 @@ public class Task {
      */
     public void recordTimerCheckpoint(int totalMinutes) {
         this.actualMinutes = totalMinutes;
+    }
+
+    /**
+     * Sets this task's priority, defaulting to {@code NORMAL} when given null - priority is
+     * optional on the client's request DTO, but the column itself is non-nullable.
+     */
+    public void setPriority(TaskPriority priority) {
+        this.priority = priority != null ? priority : TaskPriority.NORMAL;
     }
 }
