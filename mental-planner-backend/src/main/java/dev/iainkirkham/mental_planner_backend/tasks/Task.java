@@ -3,6 +3,7 @@ package dev.iainkirkham.mental_planner_backend.tasks;
 import dev.iainkirkham.mental_planner_backend.security.EncryptedStringConverter;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -75,7 +76,10 @@ public class Task {
 
     /**
      * Minutes actually tracked against this task via start/pause time tracking.
+     * Mutated only through {@link #applyManualEntry}, {@link #unwindManualEntry}, and
+     * {@link #recordTimerCheckpoint} - see those for the rules governing this total.
      */
+    @Setter(AccessLevel.NONE)
     @Column(name = "actual_minutes", nullable = false)
     private int actualMinutes = 0;
 
@@ -106,4 +110,37 @@ public class Task {
      */
     @Column(name = "user_id")
     private String userId;
+
+    /**
+     * Adds a manually-logged time entry's minutes onto the tracked total. Manual entries have
+     * no other path to update the total, unlike stopwatch/countdown runs which are reflected
+     * via {@link #recordTimerCheckpoint} instead.
+     *
+     * @param minutes the manual entry's minutes; must be positive.
+     */
+    public void applyManualEntry(int minutes) {
+        this.actualMinutes += minutes;
+    }
+
+    /**
+     * Unwinds a manually-logged time entry's minutes from the tracked total (clamped at 0),
+     * used when that entry is deleted.
+     *
+     * @param minutes the deleted manual entry's minutes; must be positive.
+     */
+    public void unwindManualEntry(int minutes) {
+        this.actualMinutes = Math.max(0, this.actualMinutes - minutes);
+    }
+
+    /**
+     * Sets the tracked total to a stopwatch or countdown run's elapsed total, sent as a
+     * checkpoint by the client during (or at the end of) that run. Recorded as history
+     * separately, via a {@link TaskTimeEntry} with source {@code STOPWATCH} or
+     * {@code COUNTDOWN}; those entries never touch this total directly.
+     *
+     * @param totalMinutes the run's elapsed total in minutes; must not be negative.
+     */
+    public void recordTimerCheckpoint(int totalMinutes) {
+        this.actualMinutes = totalMinutes;
+    }
 }
