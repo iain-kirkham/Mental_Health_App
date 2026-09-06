@@ -42,6 +42,8 @@
     --color-overlay0: hsl(var(--overlay0));
 
     --color-lavender: hsl(var(--lavender));
+    --color-sapphire: hsl(var(--sapphire));
+    --color-flamingo: hsl(var(--flamingo));
     --color-status-done: hsl(var(--status-done));
     --color-status-active: hsl(var(--status-active));
     --color-status-high: hsl(var(--status-high));
@@ -116,6 +118,8 @@
         --overlay0: 228 11% 65%;        /* Overlay0 */
 
         --lavender: 231 97% 72%;        /* Lavender */
+        --sapphire: 189 70% 42%;        /* Sapphire */
+        --flamingo: 0 60% 67%;          /* Flamingo */
         --status-done: 109 58% 40%;     /* Green */
         --status-active: 220 91% 54%;   /* Blue */
         --status-high: 347 87% 44%;     /* Red */
@@ -176,6 +180,8 @@
         --overlay0: 231 11% 47%;        /* Overlay0 */
 
         --lavender: 232 97% 85%;        /* Lavender */
+        --sapphire: 199 76% 69%;        /* Sapphire */
+        --flamingo: 0 59% 88%;          /* Flamingo */
         --status-done: 115 54% 76%;     /* Green */
         --status-active: 217 92% 76%;   /* Blue */
         --status-high: 343 81% 75%;     /* Red */

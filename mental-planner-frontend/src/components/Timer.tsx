@@ -56,6 +56,16 @@ export default function Timer() {
     const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) =>
         setInputTime(parseInt(e.target.value));
 
+    // Linking the session to a task should default the duration to that task's own planned
+    // time (falling back to the generic default when it has none set), the same way the
+    // Focus/Execution Mode overlays default their presets - otherwise picking a task here still
+    // starts whatever flat number was left over from before.
+    const handleSelectTask = (taskId: number | null) => {
+        setSelectedTaskId(taskId);
+        const task = taskId ? todaysTasks.find((t) => t.id === taskId) : null;
+        setInputTime(task?.plannedMinutes && task.plannedMinutes > 0 ? task.plannedMinutes : DEFAULT_MINUTES);
+    };
+
     const startPause = () => {
         if (isRunning) {
             pauseTimer();
@@ -105,7 +115,7 @@ export default function Timer() {
                         <TaskLinkPicker
                             tasks={todaysTasks}
                             selectedTaskId={hasCountdownProgress ? activeTaskId : selectedTaskId}
-                            onChange={setSelectedTaskId}
+                            onChange={handleSelectTask}
                             disabled={hasCountdownProgress}
                             isLoading={isLoadingTasks}
                         />
@@ -144,7 +154,7 @@ export default function Timer() {
                             <TaskLinkPicker
                                 tasks={todaysTasks}
                                 selectedTaskId={hasCountdownProgress ? activeTaskId : selectedTaskId}
-                                onChange={setSelectedTaskId}
+                                onChange={handleSelectTask}
                                 disabled={hasCountdownProgress}
                                 isLoading={isLoadingTasks}
                             />

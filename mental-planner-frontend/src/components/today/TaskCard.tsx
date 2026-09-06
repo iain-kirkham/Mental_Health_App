@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { priorityBorderClass } from '@/lib/task-priority'
+import { channelPillClass } from '@/lib/channel-color'
 import { useTimerStore } from '@/store/timerStore'
 import type { TaskResponseDTO } from '@/types'
 
@@ -228,8 +229,8 @@ export default function TaskCard({
         )}
         <div className="flex-1" />
         {task.category && (
-          <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-secondary-foreground">
-            {task.category}
+          <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-medium', channelPillClass(task.category))}>
+            #{task.category}
           </span>
         )}
       </div>
