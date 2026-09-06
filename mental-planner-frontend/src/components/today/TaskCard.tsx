@@ -6,9 +6,9 @@ import { Plus, Timer as TimerIcon } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
-import { priorityBorderClass } from '@/lib/task-priority'
-import { channelPillClass } from '@/lib/channel-color'
-import { useTimerStore } from '@/store/timerStore'
+import { priorityDotClass } from '@/lib/task-priority'
+import { useChannelColor } from '@/hooks/useChannelColor'
+import { useLiveActualSeconds } from '@/hooks/useTaskTimer'
 import type { TaskResponseDTO } from '@/types'
 
 interface TaskCardProps {
@@ -49,12 +49,9 @@ export default function TaskCard({
   const [addingSubtask, setAddingSubtask] = useState(false)
   const [subtaskTitle, setSubtaskTitle] = useState('')
 
-  const activeTaskId = useTimerStore((state) => state.activeTaskId)
-  const isRunning = useTimerStore((state) => state.isRunning)
-  const elapsedSeconds = useTimerStore((state) => state.elapsedSeconds)
+  const channelColor = useChannelColor(task.category)
 
-  const isTimerRunning = isRunning && activeTaskId === task.id
-  const liveSeconds = isTimerRunning ? task.actualMinutes * 60 + elapsedSeconds : null
+  const { isRunningHere: isTimerRunning, actualSeconds: liveSeconds } = useLiveActualSeconds(task)
 
   const hasSubtasks = task.subtasks.length > 0
   const completedSubtaskCount = task.subtasks.filter((subtask) => subtask.completed).length
@@ -84,8 +81,8 @@ export default function TaskCard({
         if (event.key === 'Enter') onOpenDetail(task)
       }}
       className={cn(
-        'group flex cursor-pointer flex-col gap-1 rounded-md border border-border bg-card p-2.5 shadow-sm transition-all duration-300 ease-in-out hover:shadow-md',
-        priorityBorderClass(task.priority),
+        'group flex cursor-pointer flex-col gap-1 rounded-md border bg-card p-2.5 shadow-sm transition-all duration-300 ease-in-out hover:shadow-md',
+        task.category ? cn(channelColor.cardBorder, channelColor.cardFill) : 'border-border',
         task.completed ? 'opacity-60' : 'opacity-100',
         isOverlay ? 'shadow-lg' : ''
       )}
@@ -95,6 +92,12 @@ export default function TaskCard({
       {/* Top: start time + title + time badge */}
       <div className="flex items-start gap-2">
         <div className="flex flex-1 items-baseline gap-1.5 min-w-0">
+          {task.priority !== 'NORMAL' && (
+            <span
+              className={cn('h-1.5 w-1.5 shrink-0 rounded-full', priorityDotClass(task.priority))}
+              aria-label={`${task.priority} priority`}
+            />
+          )}
           {task.startTime && (
             <span className="shrink-0 font-mono text-[10px] text-muted-foreground">{formatStartTime(task.startTime)}</span>
           )}
@@ -229,7 +232,7 @@ export default function TaskCard({
         )}
         <div className="flex-1" />
         {task.category && (
-          <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-medium', channelPillClass(task.category))}>
+          <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-medium', channelColor.pill)}>
             #{task.category}
           </span>
         )}

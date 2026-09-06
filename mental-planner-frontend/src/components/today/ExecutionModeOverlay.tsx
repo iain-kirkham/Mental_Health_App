@@ -9,6 +9,7 @@ import { useChannelColor } from '@/hooks/useChannelColor'
 import { useDebouncedCommit } from '@/hooks/useDebouncedCommit'
 import { useKeyedDraft } from '@/hooks/useKeyedDraft'
 import { useTimerStore } from '@/store/timerStore'
+import { useCountdownSession } from '@/hooks/useTaskTimer'
 import type { TaskResponseDTO } from '@/types'
 
 const PRESETS_MINUTES = [10, 25, 50]
@@ -46,11 +47,9 @@ export default function ExecutionModeOverlay({
   onAddSubtask,
   onUpdateNotes,
 }: ExecutionModeOverlayProps) {
-  const activeTaskId = useTimerStore((state) => state.activeTaskId)
-  const isRunning = useTimerStore((state) => state.isRunning)
-  const timerMode = useTimerStore((state) => state.mode)
+  // Read directly rather than through useCountdownSession: this is the exact session length to
+  // resume with (not re-derived from secondsLeft/elapsed, which would drift under rounding).
   const sessionLengthMinutes = useTimerStore((state) => state.sessionLengthMinutes)
-  const elapsedSeconds = useTimerStore((state) => state.elapsedSeconds)
   const startTimer = useTimerStore((state) => state.startTimer)
   const pauseTimer = useTimerStore((state) => state.pauseTimer)
   const cancelTimer = useTimerStore((state) => state.cancelTimer)
@@ -86,20 +85,13 @@ export default function ExecutionModeOverlay({
   const task = currentIndex >= 0 ? openTasks[currentIndex] : null
   const channelColor = useChannelColor(task?.category)
 
-  // Defaults the session length to the card's own planned time, so a task estimated at 45m
-  // starts a 45m focus session instead of always defaulting to the generic 25m preset. Keyed by
-  // task id (like notesDraft below) since this overlay stays mounted across the whole queue - a
-  // bare useState would leak the previous task's manual choice onto the next one.
-  const defaultMinutes = task?.plannedMinutes && task.plannedMinutes > 0 ? task.plannedMinutes : 25
+  const { isActiveHere: hasSession, running, secondsLeft, defaultMinutes } = useCountdownSession(task)
+  // Keyed by task id (like notesDraft below) since this overlay stays mounted across the whole
+  // queue - a bare useState would leak the previous task's manual choice onto the next one.
   const [selectedPreset, setManualPresetMinutes] = useKeyedDraft(task?.id ?? null, defaultMinutes)
   const [customMinutesInput, setCustomDraftText, resetCustomDraft] = useKeyedDraft(task?.id ?? null, '')
 
-  const isThisTask = task !== null && activeTaskId === task.id && timerMode === 'countdown'
-  const hasSession = isThisTask && sessionLengthMinutes !== null
-  const running = isRunning && isThisTask
-
-  const totalTime = hasSession ? sessionLengthMinutes * 60 : selectedPreset * 60
-  const timeLeft = hasSession ? Math.max(0, totalTime - elapsedSeconds) : totalTime
+  const timeLeft = hasSession ? secondsLeft! : selectedPreset * 60
 
   const startPause = () => {
     if (!task) return
