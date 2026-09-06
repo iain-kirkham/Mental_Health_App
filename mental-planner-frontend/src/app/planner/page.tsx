@@ -12,7 +12,7 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core'
 import { addDays, addMinutes, addWeeks, differenceInMinutes, format, isToday, parseISO, startOfWeek, subWeeks } from 'date-fns'
-import { ChevronLeft, ChevronRight, Zap } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ListChecks, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import DayColumn from '@/components/today/DayColumn'
 import TaskCard from '@/components/today/TaskCard'
@@ -23,11 +23,13 @@ import NewTaskModal from '@/components/today/NewTaskModal'
 import DatePickerButton from '@/components/today/DatePickerButton'
 import TodayColumn from '@/components/today/TodayColumn'
 import TimelineGrid, { GRID_HOURS, GRID_START_HOUR, HOUR_HEIGHT, TIMELINE_DROPPABLE_ID } from '@/components/today/TimelineGrid'
+import MobileTaskDrawer from '@/components/today/MobileTaskDrawer'
 import PageHeader from '@/components/PageHeader'
 import { cn } from '@/lib/utils'
 import { parseDragId } from '@/lib/timeline-drag-ids'
 import useTasksForWeek from '@/hooks/useTasksForWeek'
 import { useChannelColor } from '@/hooks/useChannelColor'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 import type { TaskResponseDTO } from '@/types'
 
 /** Drag-ghost for the Today view's timeline drag/resize - same normal-border category coloring
@@ -93,6 +95,10 @@ export default function PlannerPage() {
   const [executionModeOpen, setExecutionModeOpen] = useState(false)
   const [executionInitialTaskId, setExecutionInitialTaskId] = useState<number | null>(null)
   const [draggingTimelineTask, setDraggingTimelineTask] = useState<TaskResponseDTO | null>(null)
+  const [mobileQueueOpen, setMobileQueueOpen] = useState(false)
+  // Below md there isn't room for the queue and the timeline grid side by side, so the queue
+  // becomes a slide-out drawer over the grid instead (see the Today view render below).
+  const isDesktop = useMediaQuery('(min-width: 768px)')
 
   const todayDateKey = toDateKey(new Date())
   const weekHasToday = weekDays.some((day) => isToday(day))
@@ -157,6 +163,10 @@ export default function PlannerPage() {
   const handleTimelineDragStart = (event: DragStartEvent) => {
     const parsed = parseDragId(String(event.active.id))
     if (parsed.kind === 'resize') return
+    // Dragging a task out of the mobile queue drawer needs the grid underneath to actually be
+    // visible to drop onto, so close the drawer the moment a drag starts rather than making the
+    // user close it first.
+    setMobileQueueOpen(false)
     setDraggingTimelineTask(todayTasks.find((task) => task.id === parsed.taskId) ?? null)
   }
 
@@ -242,39 +252,54 @@ export default function PlannerPage() {
               Today
             </button>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={() => setWeekAnchor((d) => subWeeks(d, 1))}
-            aria-label="Previous week"
-            disabled={viewMode === 'today'}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="text-xs font-medium text-muted-foreground">
-            {viewMode === 'today'
-              ? format(new Date(), 'EEEE, MMM d, yyyy')
-              : `${format(weekDays[0], 'MMM d')} – ${format(weekDays[6], 'MMM d, yyyy')}`}
-          </span>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={() => setWeekAnchor((d) => addWeeks(d, 1))}
-            aria-label="Next week"
-            disabled={viewMode === 'today'}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          {viewMode === 'week' && (
-            <DatePickerButton
-              value={toDateKey(weekAnchor)}
-              onChange={(dateKey) => setWeekAnchor(parseISO(dateKey))}
-              showLabel={false}
-              ariaLabel="Jump to date"
-              className="ml-1"
-            />
+          {viewMode === 'week' ? (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setWeekAnchor((d) => subWeeks(d, 1))}
+                aria-label="Previous week"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="hidden text-xs font-medium text-muted-foreground sm:inline">
+                {`${format(weekDays[0], 'MMM d')} – ${format(weekDays[6], 'MMM d, yyyy')}`}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setWeekAnchor((d) => addWeeks(d, 1))}
+                aria-label="Next week"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <DatePickerButton
+                value={toDateKey(weekAnchor)}
+                onChange={(dateKey) => setWeekAnchor(parseISO(dateKey))}
+                showLabel={false}
+                ariaLabel="Jump to date"
+                className="ml-1"
+              />
+            </>
+          ) : (
+            // Today mode has nothing to page through - the week-nav controls would just sit
+            // disabled, wasting space that's scarce on mobile - so only the date itself shows.
+            <span className="hidden text-xs font-medium text-muted-foreground sm:inline">
+              {format(new Date(), 'EEEE, MMM d, yyyy')}
+            </span>
+          )}
+          {!isDesktop && viewMode === 'today' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1.5 px-2.5 text-xs"
+              onClick={() => setMobileQueueOpen(true)}
+            >
+              <ListChecks className="h-3.5 w-3.5" />
+              Tasks
+            </Button>
           )}
           {weekHasToday && (
             <Button
@@ -288,7 +313,7 @@ export default function PlannerPage() {
               disabled={!executionQueueOpen}
             >
               <Zap className="h-3.5 w-3.5" />
-              Execution Mode
+              <span className="hidden sm:inline">Execution Mode</span>
             </Button>
           )}
         </div>
@@ -336,24 +361,27 @@ export default function PlannerPage() {
           </div>
         </div>
       ) : (
-        // Sunsama-style daily view: a single-day task column on the left, hourly time-blocking
-        // grid on the right for tasks that have a scheduled start/end time. Dragging a task from
-        // the queue (or an already-placed block) onto the grid time-boxes it.
+        // Sunsama-style daily view: a single-day task column, hourly time-blocking grid next to
+        // it. Dragging a task from the queue (or an already-placed block) onto the grid time-
+        // boxes it. Below md there's no room for both side by side, so the queue becomes a
+        // slide-out drawer over the grid instead (see isDesktop above).
         <div className="flex min-h-0 flex-1 gap-4 px-3 py-3 md:px-4">
           <DndContext sensors={sensors} onDragStart={handleTimelineDragStart} onDragEnd={handleTimelineDragEnd}>
-            <div className="w-full max-w-sm shrink-0 border-r border-border pr-4">
-              <TodayColumn
-                date={new Date()}
-                tasks={todayTasks}
-                isLoading={isLoading}
-                onRequestAddTask={() => setAddTaskDateKey(todayDateKey)}
-                onToggleComplete={handleToggleComplete}
-                onToggleSubtask={(taskId, subtaskId, completed) => void updateSubtaskItem(taskId, subtaskId, { completed })}
-                onAddSubtask={(taskId, title) => void addSubtask(taskId, title)}
-                onOpenDetail={(task) => setSelectedTaskId(task.id)}
-                onOpenFocus={(task) => setFocusTaskId(task.id)}
-              />
-            </div>
+            {isDesktop && (
+              <div className="w-full max-w-sm shrink-0 border-r border-border pr-4">
+                <TodayColumn
+                  date={new Date()}
+                  tasks={todayTasks}
+                  isLoading={isLoading}
+                  onRequestAddTask={() => setAddTaskDateKey(todayDateKey)}
+                  onToggleComplete={handleToggleComplete}
+                  onToggleSubtask={(taskId, subtaskId, completed) => void updateSubtaskItem(taskId, subtaskId, { completed })}
+                  onAddSubtask={(taskId, title) => void addSubtask(taskId, title)}
+                  onOpenDetail={(task) => setSelectedTaskId(task.id)}
+                  onOpenFocus={handleOpenFocus}
+                />
+              </div>
+            )}
             <TimelineGrid
               date={new Date()}
               tasks={todayTasks}
@@ -362,6 +390,31 @@ export default function PlannerPage() {
             />
 
             <DragOverlay>{draggingTimelineTask ? <TimelineDragGhost task={draggingTimelineTask} /> : null}</DragOverlay>
+
+            {!isDesktop && (
+              <MobileTaskDrawer open={mobileQueueOpen} onOpenChange={setMobileQueueOpen}>
+                <TodayColumn
+                  date={new Date()}
+                  tasks={todayTasks}
+                  isLoading={isLoading}
+                  onRequestAddTask={() => {
+                    setMobileQueueOpen(false)
+                    setAddTaskDateKey(todayDateKey)
+                  }}
+                  onToggleComplete={handleToggleComplete}
+                  onToggleSubtask={(taskId, subtaskId, completed) => void updateSubtaskItem(taskId, subtaskId, { completed })}
+                  onAddSubtask={(taskId, title) => void addSubtask(taskId, title)}
+                  onOpenDetail={(task) => {
+                    setMobileQueueOpen(false)
+                    setSelectedTaskId(task.id)
+                  }}
+                  onOpenFocus={(task) => {
+                    setMobileQueueOpen(false)
+                    handleOpenFocus(task)
+                  }}
+                />
+              </MobileTaskDrawer>
+            )}
           </DndContext>
         </div>
       )}
