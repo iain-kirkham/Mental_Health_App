@@ -27,7 +27,24 @@ import PageHeader from '@/components/PageHeader'
 import { cn } from '@/lib/utils'
 import { parseDragId } from '@/lib/timeline-drag-ids'
 import useTasksForWeek from '@/hooks/useTasksForWeek'
+import { useChannelColor } from '@/hooks/useChannelColor'
 import type { TaskResponseDTO } from '@/types'
+
+/** Drag-ghost for the Today view's timeline drag/resize - same normal-border category coloring
+ * as TaskCard and the timeline blocks. */
+function TimelineDragGhost({ task }: { task: TaskResponseDTO }) {
+  const channelColor = useChannelColor(task.category)
+  return (
+    <div
+      className={cn(
+        'max-w-52 rounded-md border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground shadow-lg',
+        task.category ? cn(channelColor.cardBorder, channelColor.cardFill) : 'border-border'
+      )}
+    >
+      {task.title || 'Untitled task'}
+    </div>
+  )
+}
 
 type ViewMode = 'week' | 'today'
 
@@ -344,13 +361,7 @@ export default function PlannerPage() {
               onUnschedule={handleUnscheduleTask}
             />
 
-            <DragOverlay>
-              {draggingTimelineTask ? (
-                <div className="max-w-52 rounded-md border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground shadow-lg">
-                  {draggingTimelineTask.title || 'Untitled task'}
-                </div>
-              ) : null}
-            </DragOverlay>
+            <DragOverlay>{draggingTimelineTask ? <TimelineDragGhost task={draggingTimelineTask} /> : null}</DragOverlay>
           </DndContext>
         </div>
       )}

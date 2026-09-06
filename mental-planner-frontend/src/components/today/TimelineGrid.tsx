@@ -5,7 +5,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { format, isToday } from 'date-fns'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { channelBorderClass } from '@/lib/channel-color'
+import { useChannelColor } from '@/hooks/useChannelColor'
 import { makeGridId, makeResizeId } from '@/lib/timeline-drag-ids'
 import type { TaskResponseDTO } from '@/types'
 
@@ -42,6 +42,7 @@ interface TimelineBlockProps {
 function TimelineBlock({ task, top, height, onOpenDetail, onUnschedule }: TimelineBlockProps) {
   const start = new Date(task.startTime!)
   const end = new Date(task.endTime!)
+  const channelColor = useChannelColor(task.category)
   const {
     attributes: moveAttributes,
     listeners: moveListeners,
@@ -77,8 +78,8 @@ function TimelineBlock({ task, top, height, onOpenDetail, onUnschedule }: Timeli
         {...moveAttributes}
         {...moveListeners}
         className={cn(
-          'h-full w-full touch-none cursor-grab overflow-hidden rounded-md bg-card px-2 py-1 text-left shadow-sm transition-shadow hover:shadow-md active:cursor-grabbing',
-          channelBorderClass(task.category ?? 'default'),
+          'h-full w-full touch-none cursor-grab overflow-hidden rounded-md border bg-card px-2 py-1 text-left shadow-sm transition-shadow hover:shadow-md active:cursor-grabbing',
+          task.category ? cn(channelColor.cardBorder, channelColor.cardFill) : 'border-border',
           task.completed && 'opacity-50',
           moveIsDragging && 'z-20 opacity-60 shadow-lg'
         )}
