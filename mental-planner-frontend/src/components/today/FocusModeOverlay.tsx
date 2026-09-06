@@ -1,11 +1,13 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { Pause, Play, Square, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { TimerDisplay } from '@/components/TimerDisplay'
+import { useKeyedDraft } from '@/hooks/useKeyedDraft'
 import { useTimerStore } from '@/store/timerStore'
+import { useCountdownSession } from '@/hooks/useTaskTimer'
 import type { TaskResponseDTO } from '@/types'
 
 const PRESETS_MINUTES = [10, 25, 50]
@@ -16,22 +18,17 @@ interface FocusModeOverlayProps {
 }
 
 export default function FocusModeOverlay({ task, onOpenChange }: FocusModeOverlayProps) {
-  const activeTaskId = useTimerStore((state) => state.activeTaskId)
-  const isRunning = useTimerStore((state) => state.isRunning)
-  const timerMode = useTimerStore((state) => state.mode)
+  // Read directly rather than through useCountdownSession: this is the exact session length to
+  // resume with (not re-derived from secondsLeft/elapsed, which would drift under rounding).
   const sessionLengthMinutes = useTimerStore((state) => state.sessionLengthMinutes)
-  const elapsedSeconds = useTimerStore((state) => state.elapsedSeconds)
   const startTimer = useTimerStore((state) => state.startTimer)
   const pauseTimer = useTimerStore((state) => state.pauseTimer)
   const cancelTimer = useTimerStore((state) => state.cancelTimer)
 
+  const { isActiveHere: hasSession, running, secondsLeft, defaultMinutes } = useCountdownSession(task)
   // Keyed by task id since this overlay stays mounted across different tasks (task changes via
   // prop, no remount) - a bare useState would leak the previous task's manual choice forward.
-  const [manualPreset, setManualPreset] = useState<{ taskId: number; minutes: number } | null>(null)
-
-  const isThisTask = task !== null && activeTaskId === task.id && timerMode === 'countdown'
-  const hasSession = isThisTask && sessionLengthMinutes !== null
-  const running = isRunning && isThisTask
+  const [selectedPreset, setManualPresetMinutes] = useKeyedDraft(task?.id ?? null, defaultMinutes)
 
   // A session that was active for this task and then vanished (completed or cancelled) means the
   // countdown's own lifecycle ended it - the reflection prompt (GlobalPomodoroModal) takes over
@@ -46,12 +43,8 @@ export default function FocusModeOverlay({ task, onOpenChange }: FocusModeOverla
 
   if (!task) return null
 
-  // Defaults the session length to the card's own planned time instead of a flat 25m.
-  const defaultMinutes = task.plannedMinutes && task.plannedMinutes > 0 ? task.plannedMinutes : 25
-  const selectedPreset = manualPreset && manualPreset.taskId === task.id ? manualPreset.minutes : defaultMinutes
-
-  const totalTime = hasSession ? sessionLengthMinutes * 60 : selectedPreset * 60
-  const timeLeft = hasSession ? Math.max(0, totalTime - elapsedSeconds) : totalTime
+  const totalTime = hasSession ? sessionLengthMinutes! * 60 : selectedPreset * 60
+  const timeLeft = hasSession ? secondsLeft! : totalTime
 
   const startPause = () => {
     if (running) {
@@ -96,7 +89,7 @@ export default function FocusModeOverlay({ task, onOpenChange }: FocusModeOverla
                   <button
                     key={minutes}
                     type="button"
-                    onClick={() => setManualPreset({ taskId: task.id, minutes })}
+                    onClick={() => setManualPresetMinutes(minutes)}
                     className={cn(
                       'rounded-full px-4 py-1.5 font-mono text-sm tabular-nums transition-colors',
                       selectedPreset === minutes

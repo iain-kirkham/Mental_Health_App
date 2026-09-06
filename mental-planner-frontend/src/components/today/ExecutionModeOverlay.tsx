@@ -5,8 +5,11 @@ import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { CheckCircle2, Circle, PanelLeftClose, PanelLeftOpen, Pause, Play, Plus, Square, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Textarea } from '@/components/ui/textarea'
-import { channelPillClass } from '@/lib/channel-color'
+import { useChannelColor } from '@/hooks/useChannelColor'
+import { useDebouncedCommit } from '@/hooks/useDebouncedCommit'
+import { useKeyedDraft } from '@/hooks/useKeyedDraft'
 import { useTimerStore } from '@/store/timerStore'
+import { useCountdownSession } from '@/hooks/useTaskTimer'
 import type { TaskResponseDTO } from '@/types'
 
 const PRESETS_MINUTES = [10, 25, 50]
@@ -44,26 +47,18 @@ export default function ExecutionModeOverlay({
   onAddSubtask,
   onUpdateNotes,
 }: ExecutionModeOverlayProps) {
-  const activeTaskId = useTimerStore((state) => state.activeTaskId)
-  const isRunning = useTimerStore((state) => state.isRunning)
-  const timerMode = useTimerStore((state) => state.mode)
+  // Read directly rather than through useCountdownSession: this is the exact session length to
+  // resume with (not re-derived from secondsLeft/elapsed, which would drift under rounding).
   const sessionLengthMinutes = useTimerStore((state) => state.sessionLengthMinutes)
-  const elapsedSeconds = useTimerStore((state) => state.elapsedSeconds)
   const startTimer = useTimerStore((state) => state.startTimer)
   const pauseTimer = useTimerStore((state) => state.pauseTimer)
   const cancelTimer = useTimerStore((state) => state.cancelTimer)
 
-  // Keyed by task id (like notesDraft below) rather than a plain useState, since this overlay
-  // stays mounted across the whole queue - a bare useState would leak the previous task's manual
-  // preset choice onto the next one instead of resetting to its own planned time.
-  const [manualPreset, setManualPreset] = useState<{ taskId: number; minutes: number } | null>(null)
-  const [customDraft, setCustomDraft] = useState<{ taskId: number; text: string } | null>(null)
   const [requestedTaskId, setRequestedTaskId] = useState<number | null>(null)
   const [celebrating, setCelebrating] = useState(false)
   const [panelCollapsed, setPanelCollapsed] = useState(false)
   const [addingSubtask, setAddingSubtask] = useState(false)
   const [subtaskTitle, setSubtaskTitle] = useState('')
-  const [notesDraft, setNotesDraft] = useState<{ taskId: number; value: string } | null>(null)
 
   // The dialog stays mounted (open is just a prop), so the queue pointer must be re-seeded from
   // initialTaskId each time it opens - otherwise opening on task A, closing, then opening on task
@@ -88,20 +83,15 @@ export default function ExecutionModeOverlay({
 
   const currentIndex = openTasks.findIndex((t) => t.id === currentTaskId)
   const task = currentIndex >= 0 ? openTasks[currentIndex] : null
+  const channelColor = useChannelColor(task?.category)
 
-  // Defaults the session length to the card's own planned time, so a task estimated at 45m
-  // starts a 45m focus session instead of always defaulting to the generic 25m preset.
-  const defaultMinutes = task?.plannedMinutes && task.plannedMinutes > 0 ? task.plannedMinutes : 25
-  const selectedPreset =
-    manualPreset && task && manualPreset.taskId === task.id ? manualPreset.minutes : defaultMinutes
-  const customMinutesInput = customDraft && task && customDraft.taskId === task.id ? customDraft.text : ''
+  const { isActiveHere: hasSession, running, secondsLeft, defaultMinutes } = useCountdownSession(task)
+  // Keyed by task id (like notesDraft below) since this overlay stays mounted across the whole
+  // queue - a bare useState would leak the previous task's manual choice onto the next one.
+  const [selectedPreset, setManualPresetMinutes] = useKeyedDraft(task?.id ?? null, defaultMinutes)
+  const [customMinutesInput, setCustomDraftText, resetCustomDraft] = useKeyedDraft(task?.id ?? null, '')
 
-  const isThisTask = task !== null && activeTaskId === task.id && timerMode === 'countdown'
-  const hasSession = isThisTask && sessionLengthMinutes !== null
-  const running = isRunning && isThisTask
-
-  const totalTime = hasSession ? sessionLengthMinutes * 60 : selectedPreset * 60
-  const timeLeft = hasSession ? Math.max(0, totalTime - elapsedSeconds) : totalTime
+  const timeLeft = hasSession ? secondsLeft! : selectedPreset * 60
 
   const startPause = () => {
     if (!task) return
@@ -144,19 +134,13 @@ export default function ExecutionModeOverlay({
   // keystroke, so a fast typist doesn't trigger a save request per character. The draft is keyed
   // by task id so it's only shown while that same task is on screen - no effect needed to reset
   // it when the focused task changes, since a stale draft simply stops matching.
-  const notesSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [notesValue, setNotesDraftValue] = useKeyedDraft(task?.id ?? null, task?.description ?? '')
+  const commitNotes = useDebouncedCommit(NOTES_SAVE_DEBOUNCE_MS)
   const handleNotesChange = (value: string) => {
     if (!task) return
-    setNotesDraft({ taskId: task.id, value })
-    if (notesSaveTimeoutRef.current) clearTimeout(notesSaveTimeoutRef.current)
-    notesSaveTimeoutRef.current = setTimeout(() => onUpdateNotes?.(task.id, value), NOTES_SAVE_DEBOUNCE_MS)
+    setNotesDraftValue(value)
+    commitNotes(value, (v) => onUpdateNotes?.(task.id, v))
   }
-  useEffect(() => {
-    return () => {
-      if (notesSaveTimeoutRef.current) clearTimeout(notesSaveTimeoutRef.current)
-    }
-  }, [])
-  const notesValue = notesDraft && notesDraft.taskId === task?.id ? notesDraft.value : task?.description ?? ''
 
   // Latest callback lives in a ref so the keydown listener can stay bound for the whole time the
   // overlay is open instead of being torn down and rebound every time the timer ticks.
@@ -269,11 +253,11 @@ export default function ExecutionModeOverlay({
                 <div className="min-w-0 flex-1 space-y-6">
                   <div className="space-y-2">
                     {task.category && (
-                      <span className={cn('inline-block rounded-full px-2 py-0.5 text-[11px] font-medium', channelPillClass(task.category))}>
+                      <span className={cn('inline-block rounded-full px-2 py-0.5 text-[11px] font-medium', channelColor.pill)}>
                         #{task.category}
                       </span>
                     )}
-                    <h1 className="text-2xl font-semibold leading-tight text-foreground">{task.title || 'Untitled task'}</h1>
+                    <h1 className="text-3xl font-bold leading-tight text-foreground">{task.title || 'Untitled task'}</h1>
                   </div>
 
                   <div className="space-y-1.5">
@@ -285,12 +269,12 @@ export default function ExecutionModeOverlay({
                             type="button"
                             onClick={() => onToggleSubtask?.(task.id, subtask.id, !subtask.completed)}
                             disabled={!onToggleSubtask}
-                            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent/50 disabled:hover:bg-transparent"
+                            className="flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left text-base transition-colors hover:bg-accent/50 disabled:hover:bg-transparent"
                           >
                             {subtask.completed ? (
-                              <CheckCircle2 className="h-4 w-4 shrink-0 text-status-done" />
+                              <CheckCircle2 className="h-5 w-5 shrink-0 text-status-done" />
                             ) : (
-                              <Circle className="h-4 w-4 shrink-0 text-muted-foreground/50" />
+                              <Circle className="h-5 w-5 shrink-0 text-muted-foreground/50" />
                             )}
                             <span className={cn('truncate text-foreground', subtask.completed && 'text-muted-foreground line-through')}>
                               {subtask.title}
@@ -379,8 +363,8 @@ export default function ExecutionModeOverlay({
                           type="button"
                           onClick={() => {
                             if (!task) return
-                            setManualPreset({ taskId: task.id, minutes })
-                            setCustomDraft(null)
+                            setManualPresetMinutes(minutes)
+                            resetCustomDraft()
                           }}
                           className={cn(
                             'rounded-full px-2.5 py-1 font-mono text-xs tabular-nums transition-colors',
@@ -399,9 +383,9 @@ export default function ExecutionModeOverlay({
                         onChange={(event) => {
                           if (!task) return
                           const digitsOnly = event.target.value.replace(/\D/g, '').slice(0, 3)
-                          setCustomDraft({ taskId: task.id, text: digitsOnly })
+                          setCustomDraftText(digitsOnly)
                           const parsed = Number(digitsOnly)
-                          if (parsed > 0) setManualPreset({ taskId: task.id, minutes: Math.min(parsed, 300) })
+                          if (parsed > 0) setManualPresetMinutes(Math.min(parsed, 300))
                         }}
                         placeholder="custom"
                         aria-label="Custom session length in minutes"

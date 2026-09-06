@@ -25,16 +25,3 @@ export function priorityDotClass(priority: TaskPriority): string {
       return 'bg-muted-foreground/40'
   }
 }
-
-export function priorityBorderClass(priority: TaskPriority): string {
-  switch (priority) {
-    case 'URGENT':
-      return 'border-l-2 border-l-destructive'
-    case 'HIGH':
-      return 'border-l-2 border-l-chart-4'
-    case 'LOW':
-      return 'border-l-2 border-l-chart-1'
-    default:
-      return ''
-  }
-}

@@ -53,6 +53,27 @@ function toRequestDTO(task: TaskResponseDTO): TaskRequestDTO {
   };
 }
 
+/** Builds the PUT payload for a task update from the pre-mutation snapshot plus the requested
+ * changes. Pulled out of updateTaskMutation's `mutationFn` so the merge itself is testable
+ * without a query cache or a mutation lifecycle. */
+export function mergeTaskChanges(existing: TaskResponseDTO, changes: Partial<TaskRequestDTO>): TaskRequestDTO {
+  return { ...toRequestDTO(existing), ...changes };
+}
+
+/** Same idea as mergeTaskChanges, for subtasks. */
+export function mergeSubtaskChanges(
+  existing: SubtaskResponseDTO,
+  changes: Partial<SubtaskRequestDTO>
+): SubtaskRequestDTO {
+  return {
+    title: existing.title,
+    completed: existing.completed,
+    sortOrder: existing.sortOrder,
+    plannedMinutes: existing.plannedMinutes,
+    ...changes,
+  };
+}
+
 /** Shared optimistic-update/rollback plumbing for every task mutation below. Reads/writes
  * always go through the query cache (never a render-time closure) so a mutation that gets
  * queued while offline still acts on the live cache when it actually replays. */
@@ -100,21 +121,40 @@ export function computeReorderedColumn(
 
 /** Every task mutation in this hook shares the same optimistic-update/rollback/mutate wiring -
  * only what actually varies (the request, the optimistic patch, what to reconcile on success)
- * differs per call site. */
-function useTaskMutation<TVars, TResult>(
+ * differs per call site.
+ *
+ * `snapshot`, if given, is read from the cache and bound to the mutation's own `vars` at the
+ * moment `.mutate()` is called - before React Query's `onMutate` has applied the optimistic
+ * patch, and before any other in-flight `.mutate()` call's `onMutate` can run. `mutationFn`
+ * receives that snapshot as its second argument instead of re-reading the cache itself, which
+ * would otherwise see its own patch already applied (moveTaskMutation hit exactly this bug: a
+ * `mutationFn` that reads the cache is reading its own onMutate's leftovers, not pre-mutation
+ * state). Binding the snapshot per-call in the `mutate` wrapper - rather than in a ref shared
+ * across calls - is what keeps this safe when two mutations for the same query overlap. */
+export function useTaskMutation<TVars, TResult, TSnapshot = undefined>(
   queryClient: QueryClient,
   queryKey: QueryKey,
   config: {
-    mutationFn: (vars: TVars) => Promise<TResult>;
+    snapshot?: (current: TaskResponseDTO[] | undefined, vars: TVars) => TSnapshot;
+    mutationFn: (vars: TVars, snapshot: TSnapshot) => Promise<TResult>;
     updater: (current: TaskResponseDTO[], vars: TVars) => TaskResponseDTO[];
     fallbackMessage: string;
     onSuccess?: (result: TResult, vars: TVars) => void;
   }
 ) {
-  return useMutation({
-    mutationFn: config.mutationFn,
-    ...withOptimisticUpdate<TVars>(queryClient, queryKey, config.updater, config.fallbackMessage),
-    onSuccess: config.onSuccess,
+  type Bound = { vars: TVars; snapshot: TSnapshot };
+
+  const mutation = useMutation({
+    mutationFn: ({ vars, snapshot }: Bound) => config.mutationFn(vars, snapshot),
+    ...withOptimisticUpdate<Bound>(
+      queryClient,
+      queryKey,
+      (current, bound) => config.updater(current, bound.vars),
+      config.fallbackMessage
+    ),
+    onSuccess: config.onSuccess
+      ? (result: TResult, bound: Bound) => config.onSuccess!(result, bound.vars)
+      : undefined,
     onSettled: () => {
       // Other task-list caches elsewhere in the app (e.g. the Pomodoro page's single-day
       // query) use a different queryKey and don't share this hook's optimistic update, so
@@ -122,6 +162,14 @@ function useTaskMutation<TVars, TResult>(
       void queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
   });
+
+  return {
+    ...mutation,
+    mutate: (vars: TVars) => {
+      const snapshot = config.snapshot?.(queryClient.getQueryData<TaskResponseDTO[]>(queryKey), vars) as TSnapshot;
+      mutation.mutate({ vars, snapshot });
+    },
+  };
 }
 
 export default function useTasksForWeek(
@@ -214,25 +262,25 @@ export default function useTasksForWeek(
     addTaskMutation.mutate({ request, tempId: -Date.now() });
   };
 
-  const updateTaskMutation = useTaskMutation<{ id: number; changes: Partial<TaskRequestDTO> }, TaskResponseDTO>(
-    queryClient,
-    queryKey,
-    {
-      mutationFn: (vars) => {
-        const existing = queryClient.getQueryData<TaskResponseDTO[]>(queryKey)?.find((t) => t.id === vars.id);
-        if (!existing) throw new Error("Task no longer exists.");
-        const request: TaskRequestDTO = { ...toRequestDTO(existing), ...vars.changes };
-        return apiUpdateTask(vars.id, request, getToken);
-      },
-      updater: (current, vars) => current.map((t) => (t.id === vars.id ? { ...t, ...vars.changes } : t)),
-      fallbackMessage: "Unable to update task.",
-      onSuccess: (updated) => {
-        queryClient.setQueryData<TaskResponseDTO[]>(queryKey, (current = []) =>
-          current.map((t) => (t.id === updated.id ? updated : t))
-        );
-      },
-    }
-  );
+  const updateTaskFallback = "Unable to update task.";
+  const updateTaskMutation = useTaskMutation<
+    { id: number; changes: Partial<TaskRequestDTO> },
+    TaskResponseDTO,
+    TaskResponseDTO | undefined
+  >(queryClient, queryKey, {
+    snapshot: (current, vars) => current?.find((t) => t.id === vars.id),
+    mutationFn: (vars, existing) => {
+      if (!existing) throw new Error(updateTaskFallback);
+      return apiUpdateTask(vars.id, mergeTaskChanges(existing, vars.changes), getToken);
+    },
+    updater: (current, vars) => current.map((t) => (t.id === vars.id ? { ...t, ...vars.changes } : t)),
+    fallbackMessage: updateTaskFallback,
+    onSuccess: (updated) => {
+      queryClient.setQueryData<TaskResponseDTO[]>(queryKey, (current = []) =>
+        current.map((t) => (t.id === updated.id ? updated : t))
+      );
+    },
+  });
 
   const updateTask = (id: number, changes: Partial<TaskRequestDTO>) => {
     const existing = queryClient.getQueryData<TaskResponseDTO[]>(queryKey)?.find((t) => t.id === id);
@@ -384,21 +432,17 @@ export default function useTasksForWeek(
     addSubtaskMutation.mutate({ taskId, request, tempId: -Date.now() });
   };
 
+  const updateSubtaskFallback = "Unable to update subtask.";
   const updateSubtaskMutation = useTaskMutation<
     { taskId: number; subtaskId: number; changes: Partial<SubtaskRequestDTO> },
-    SubtaskResponseDTO
+    SubtaskResponseDTO,
+    SubtaskResponseDTO | undefined
   >(queryClient, queryKey, {
-    mutationFn: (vars) => {
-      const parent = queryClient.getQueryData<TaskResponseDTO[]>(queryKey)?.find((t) => t.id === vars.taskId);
-      const existing = parent?.subtasks.find((s) => s.id === vars.subtaskId);
-      if (!existing) throw new Error("Subtask no longer exists.");
-      const request: SubtaskRequestDTO = {
-        title: existing.title,
-        completed: existing.completed,
-        sortOrder: existing.sortOrder,
-        plannedMinutes: existing.plannedMinutes,
-        ...vars.changes,
-      };
+    snapshot: (current, vars) =>
+      current?.find((t) => t.id === vars.taskId)?.subtasks.find((s) => s.id === vars.subtaskId),
+    mutationFn: (vars, existing) => {
+      if (!existing) throw new Error(updateSubtaskFallback);
+      const request = mergeSubtaskChanges(existing, vars.changes);
       return apiUpdateSubtask(vars.taskId, vars.subtaskId, request, getToken);
     },
     updater: (current, vars) =>
@@ -407,7 +451,7 @@ export default function useTasksForWeek(
           ? { ...t, subtasks: t.subtasks.map((s) => (s.id === vars.subtaskId ? { ...s, ...vars.changes } : s)) }
           : t
       ),
-    fallbackMessage: "Unable to update subtask.",
+    fallbackMessage: updateSubtaskFallback,
     onSuccess: (updated, vars) => {
       queryClient.setQueryData<TaskResponseDTO[]>(queryKey, (current = []) =>
         current.map((t) =>

@@ -25,8 +25,26 @@ import TodayColumn from '@/components/today/TodayColumn'
 import TimelineGrid, { GRID_HOURS, GRID_START_HOUR, HOUR_HEIGHT, TIMELINE_DROPPABLE_ID } from '@/components/today/TimelineGrid'
 import PageHeader from '@/components/PageHeader'
 import { cn } from '@/lib/utils'
+import { parseDragId } from '@/lib/timeline-drag-ids'
 import useTasksForWeek from '@/hooks/useTasksForWeek'
+import { useChannelColor } from '@/hooks/useChannelColor'
 import type { TaskResponseDTO } from '@/types'
+
+/** Drag-ghost for the Today view's timeline drag/resize - same normal-border category coloring
+ * as TaskCard and the timeline blocks. */
+function TimelineDragGhost({ task }: { task: TaskResponseDTO }) {
+  const channelColor = useChannelColor(task.category)
+  return (
+    <div
+      className={cn(
+        'max-w-52 rounded-md border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground shadow-lg',
+        task.category ? cn(channelColor.cardBorder, channelColor.cardFill) : 'border-border'
+      )}
+    >
+      {task.title || 'Untitled task'}
+    </div>
+  )
+}
 
 type ViewMode = 'week' | 'today'
 
@@ -137,19 +155,18 @@ export default function PlannerPage() {
   // snapped to 15-minute increments and clamped to the visible grid window. Dragging a block's
   // resize handle instead stretches/shrinks endTime, keeping startTime fixed.
   const handleTimelineDragStart = (event: DragStartEvent) => {
-    const idStr = String(event.active.id)
-    if (idStr.startsWith('resize-')) return
-    const taskId = Number(idStr.replace(/^(queue-|grid-)/, ''))
-    setDraggingTimelineTask(todayTasks.find((task) => task.id === taskId) ?? null)
+    const parsed = parseDragId(String(event.active.id))
+    if (parsed.kind === 'resize') return
+    setDraggingTimelineTask(todayTasks.find((task) => task.id === parsed.taskId) ?? null)
   }
 
   const handleTimelineDragEnd = (event: DragEndEvent) => {
     setDraggingTimelineTask(null)
     const { active, over, delta } = event
-    const idStr = String(active.id)
+    const parsed = parseDragId(String(active.id))
 
-    if (idStr.startsWith('resize-')) {
-      const taskId = Number(idStr.slice('resize-'.length))
+    if (parsed.kind === 'resize') {
+      const taskId = parsed.taskId
       const task = todayTasks.find((t) => t.id === taskId)
       if (!task || !task.startTime || !task.endTime) return
 
@@ -169,7 +186,7 @@ export default function PlannerPage() {
 
     if (!over || over.id !== TIMELINE_DROPPABLE_ID) return
 
-    const taskId = Number(idStr.replace(/^(queue-|grid-)/, ''))
+    const taskId = parsed.taskId
     const task = todayTasks.find((t) => t.id === taskId)
     if (!task) return
 
@@ -344,13 +361,7 @@ export default function PlannerPage() {
               onUnschedule={handleUnscheduleTask}
             />
 
-            <DragOverlay>
-              {draggingTimelineTask ? (
-                <div className="max-w-52 rounded-md border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground shadow-lg">
-                  {draggingTimelineTask.title || 'Untitled task'}
-                </div>
-              ) : null}
-            </DragOverlay>
+            <DragOverlay>{draggingTimelineTask ? <TimelineDragGhost task={draggingTimelineTask} /> : null}</DragOverlay>
           </DndContext>
         </div>
       )}
