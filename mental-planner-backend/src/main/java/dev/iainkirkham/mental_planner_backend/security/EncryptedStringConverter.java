@@ -17,6 +17,15 @@ import javax.crypto.SecretKey;
  * enforced by the repository/service layer) - decrypting a row owned by someone else would
  * fail loudly with an {@link EncryptionException} rather than silently return garbage,
  * since AES-GCM's auth tag check fails under the wrong key.
+ * <p>
+ * <b>Init-order invariant:</b> Hibernate instantiates this converter bean <i>while building</i>
+ * the {@code EntityManagerFactory}. {@link UserDataKeyService} must stay {@code @Lazy} here,
+ * since it depends (transitively) on a JPA repository that itself needs the
+ * {@code EntityManagerFactory} to exist - an eager dependency would be a circular
+ * bean-creation cycle. Removing {@code @Lazy} (or giving this converter any other eager
+ * dependency that reaches back into JPA) will fail application startup; this is exercised by
+ * {@code MentalPlannerBackendApplicationTests#contextLoads}, which boots the full context
+ * against a real database and so already covers every entity using this converter.
  */
 @Component
 @Converter(autoApply = false)
@@ -26,11 +35,8 @@ public class EncryptedStringConverter implements AttributeConverter<String, Stri
     private final UserDataKeyService userDataKeyService;
     private final AuthenticationContext authenticationContext;
 
-    // UserDataKeyService is @Lazy because it depends (transitively) on a JPA repository,
-    // which needs the EntityManagerFactory to exist - but Hibernate instantiates this
-    // converter bean *while building* the EntityManagerFactory, so an eager dependency
-    // here would be a circular bean-creation cycle. The proxy defers real resolution
-    // until the first encrypt/decrypt call, by which point the EMF is fully built.
+    // @Lazy defers real resolution of UserDataKeyService until the first encrypt/decrypt
+    // call, by which point the EntityManagerFactory is fully built - see class Javadoc.
     public EncryptedStringConverter(EncryptionService encryptionService,
                                      @Lazy UserDataKeyService userDataKeyService,
                                      AuthenticationContext authenticationContext) {

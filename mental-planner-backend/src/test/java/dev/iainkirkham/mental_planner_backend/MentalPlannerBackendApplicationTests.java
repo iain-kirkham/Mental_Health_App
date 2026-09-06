@@ -11,6 +11,11 @@ import org.springframework.test.context.ActiveProfiles;
 @ActiveProfiles("test")
 class MentalPlannerBackendApplicationTests {
 
+	/**
+	 * Also the regression test for EncryptedStringConverter's init-order invariant (see its
+	 * class Javadoc): every entity using that converter is registered in this context, so a
+	 * bean-creation cycle reintroduced there would fail this test.
+	 */
 	@Test
 	void contextLoads() {
 	}
