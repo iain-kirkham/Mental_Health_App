@@ -58,4 +58,22 @@ class TaskTest {
 
         assertThat(task.getActualMinutes()).isEqualTo(12);
     }
+
+    @Test
+    void setPriority_StoresGivenPriority() {
+        Task task = new Task();
+        task.setPriority(TaskPriority.URGENT);
+
+        assertThat(task.getPriority()).isEqualTo(TaskPriority.URGENT);
+    }
+
+    @Test
+    void setPriority_WithNull_DefaultsToNormal() {
+        Task task = new Task();
+        task.setPriority(TaskPriority.URGENT);
+
+        task.setPriority(null);
+
+        assertThat(task.getPriority()).isEqualTo(TaskPriority.NORMAL);
+    }
 }

@@ -63,18 +63,6 @@ class TaskMapperTest {
     }
 
     @Test
-    void toEntity_WithNullPriority_ShouldDefaultToNormal() {
-        TaskRequestDTO requestDTO = new TaskRequestDTO();
-        requestDTO.setTitle("Untitled");
-        requestDTO.setScheduledDate(FIXED_DATE);
-        requestDTO.setPriority(null);
-
-        Task entity = mapper.toEntity(requestDTO);
-
-        assertThat(entity.getPriority()).isEqualTo(TaskPriority.NORMAL);
-    }
-
-    @Test
     void toResponseDTO_ShouldConvertEntityToResponseDTO() {
         Task entity = new Task();
         entity.setId(1L);
