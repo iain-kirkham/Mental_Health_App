@@ -143,13 +143,16 @@ The frontend deploys via Vercel's own GitHub integration (root directory set to 
 ## Features
 
 ### Current Features
-- **🗂️ Weekly Task Planner:** Drag-and-drop kanban board across the week, with subtasks, priority tagging, and a detail view for each task — non-rigid, ADHD-friendly task capture.
+- **🗂️ Weekly Task Planner:** Drag-and-drop kanban board across the week, with subtasks, priority tagging, per-category color overrides, and a detail view for each task — non-rigid, ADHD-friendly task capture.
+- **☀️ Today View:** A dedicated Today column with a draggable timeline, an Actual-vs-Planned progress bar, and a mobile slide-out drawer for the task queue.
+- **🎯 Focus Mode:** A full-screen execution overlay for working a single task, with inline stopwatch/session tracking and per-task time-tracking history (stopwatch runs, sessions, and manual entries).
 - **🍅 Pomodoro Timer & Session Tracking:** Manage hyperfocus sessions with customizable timers. Rate each session (1-5) to track productivity patterns. Timer state persists globally with a live countdown in the navbar.
 - **📊 Mood Tracker:** Daily mood logging with customizable factors and notes. Identify patterns and triggers over time.
-- **🌓 Dark Mode:** Catppuccin-themed light/dark toggle.
+- **🌓 Dark Mode:** Catppuccin Mocha-themed light/dark toggle across the whole UI.
 - **📶 Offline Indicator:** Badge in the page header flags when the app loses connectivity.
 - **🎨 Clean, Responsive UI:** Built with Next.js and shadcn/ui components for a distraction-free experience.
 - **🔒 User Authentication:** Powered by Clerk for secure, personalized tracking. Signing out clears locally cached task data so it isn't left behind on shared devices.
+- **🛡️ Field-Level Encryption at Rest:** Sensitive task, subtask, mood, and pomodoro fields are encrypted per-user before hitting Postgres, with a backfill path for legacy plaintext rows.
 - **🐳 Dockerized:** Easy environment setup with Docker Compose and PostgreSQL.
 
 ### Planned ADHD-Friendly Features
