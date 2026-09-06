@@ -1,5 +1,6 @@
 package dev.iainkirkham.mental_planner_backend.tasks.dto;
 
+import dev.iainkirkham.mental_planner_backend.subtasks.dto.SubtaskResponseDTO;
 import dev.iainkirkham.mental_planner_backend.tasks.TaskPriority;
 import lombok.AllArgsConstructor;
 import lombok.Data;

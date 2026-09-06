@@ -1,4 +1,4 @@
-package dev.iainkirkham.mental_planner_backend.tasks;
+package dev.iainkirkham.mental_planner_backend.subtasks;
 
 import dev.iainkirkham.mental_planner_backend.security.EncryptedStringConverter;
 import jakarta.persistence.*;

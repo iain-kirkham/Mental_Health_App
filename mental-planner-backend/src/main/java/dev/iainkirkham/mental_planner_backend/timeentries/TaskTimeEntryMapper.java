@@ -1,7 +1,7 @@
-package dev.iainkirkham.mental_planner_backend.tasks;
+package dev.iainkirkham.mental_planner_backend.timeentries;
 
-import dev.iainkirkham.mental_planner_backend.tasks.dto.TaskTimeEntryRequestDTO;
-import dev.iainkirkham.mental_planner_backend.tasks.dto.TaskTimeEntryResponseDTO;
+import dev.iainkirkham.mental_planner_backend.timeentries.dto.TaskTimeEntryRequestDTO;
+import dev.iainkirkham.mental_planner_backend.timeentries.dto.TaskTimeEntryResponseDTO;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

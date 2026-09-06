@@ -1,6 +1,6 @@
-package dev.iainkirkham.mental_planner_backend.tasks.dto;
+package dev.iainkirkham.mental_planner_backend.timeentries.dto;
 
-import dev.iainkirkham.mental_planner_backend.tasks.TimeEntrySource;
+import dev.iainkirkham.mental_planner_backend.timeentries.TimeEntrySource;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

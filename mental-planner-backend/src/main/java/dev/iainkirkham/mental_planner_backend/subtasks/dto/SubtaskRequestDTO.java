@@ -1,4 +1,4 @@
-package dev.iainkirkham.mental_planner_backend.tasks.dto;
+package dev.iainkirkham.mental_planner_backend.subtasks.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;

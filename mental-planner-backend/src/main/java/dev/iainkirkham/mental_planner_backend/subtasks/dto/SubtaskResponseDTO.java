@@ -1,4 +1,4 @@
-package dev.iainkirkham.mental_planner_backend.tasks.dto;
+package dev.iainkirkham.mental_planner_backend.subtasks.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
