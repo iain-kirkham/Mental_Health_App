@@ -25,6 +25,7 @@ import TodayColumn from '@/components/today/TodayColumn'
 import TimelineGrid, { GRID_HOURS, GRID_START_HOUR, HOUR_HEIGHT, TIMELINE_DROPPABLE_ID } from '@/components/today/TimelineGrid'
 import PageHeader from '@/components/PageHeader'
 import { cn } from '@/lib/utils'
+import { parseDragId } from '@/lib/timeline-drag-ids'
 import useTasksForWeek from '@/hooks/useTasksForWeek'
 import type { TaskResponseDTO } from '@/types'
 
@@ -137,19 +138,18 @@ export default function PlannerPage() {
   // snapped to 15-minute increments and clamped to the visible grid window. Dragging a block's
   // resize handle instead stretches/shrinks endTime, keeping startTime fixed.
   const handleTimelineDragStart = (event: DragStartEvent) => {
-    const idStr = String(event.active.id)
-    if (idStr.startsWith('resize-')) return
-    const taskId = Number(idStr.replace(/^(queue-|grid-)/, ''))
-    setDraggingTimelineTask(todayTasks.find((task) => task.id === taskId) ?? null)
+    const parsed = parseDragId(String(event.active.id))
+    if (parsed.kind === 'resize') return
+    setDraggingTimelineTask(todayTasks.find((task) => task.id === parsed.taskId) ?? null)
   }
 
   const handleTimelineDragEnd = (event: DragEndEvent) => {
     setDraggingTimelineTask(null)
     const { active, over, delta } = event
-    const idStr = String(active.id)
+    const parsed = parseDragId(String(active.id))
 
-    if (idStr.startsWith('resize-')) {
-      const taskId = Number(idStr.slice('resize-'.length))
+    if (parsed.kind === 'resize') {
+      const taskId = parsed.taskId
       const task = todayTasks.find((t) => t.id === taskId)
       if (!task || !task.startTime || !task.endTime) return
 
@@ -169,7 +169,7 @@ export default function PlannerPage() {
 
     if (!over || over.id !== TIMELINE_DROPPABLE_ID) return
 
-    const taskId = Number(idStr.replace(/^(queue-|grid-)/, ''))
+    const taskId = parsed.taskId
     const task = todayTasks.find((t) => t.id === taskId)
     if (!task) return
 

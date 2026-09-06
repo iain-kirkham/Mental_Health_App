@@ -5,7 +5,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-
 import { CSS } from '@dnd-kit/utilities'
 import { format, isToday } from 'date-fns'
 import { Plus } from 'lucide-react'
-import TaskCard from './TaskCard'
+import DraggableTaskCardShell from './DraggableTaskCardShell'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { TaskResponseDTO } from '@/types'
@@ -46,9 +46,14 @@ function SortableTaskCard({ task, dateKey, ...handlers }: SortableTaskCardProps)
   }
 
   return (
-    <div ref={setNodeRef} style={style}>
-      <TaskCard task={task} dragHandleAttributes={attributes} dragHandleListeners={listeners} {...handlers} />
-    </div>
+    <DraggableTaskCardShell
+      task={task}
+      setNodeRef={setNodeRef}
+      attributes={attributes}
+      listeners={listeners}
+      style={style}
+      {...handlers}
+    />
   )
 }
 

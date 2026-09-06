@@ -14,8 +14,10 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import DatePickerButton from './DatePickerButton'
 import PriorityPicker from './PriorityPicker'
+import CategoryColorPicker from './CategoryColorPicker'
 import { cn } from '@/lib/utils'
 import { useTimerStore } from '@/store/timerStore'
+import { useCountdownSession, useLiveActualSeconds } from '@/hooks/useTaskTimer'
 import useTaskTimeEntries from '@/hooks/useTaskTimeEntries'
 import type { SubtaskResponseDTO, TaskPriority, TaskResponseDTO, TaskTimeEntryResponseDTO } from '@/types'
 
@@ -322,23 +324,12 @@ function TaskDetailForm({
   onUpdateSubtask,
   onOpenFocus,
 }: TaskDetailFormProps) {
-  const activeTaskId = useTimerStore((state) => state.activeTaskId)
-  const isRunning = useTimerStore((state) => state.isRunning)
-  const timerMode = useTimerStore((state) => state.mode)
-  const sessionLengthMinutes = useTimerStore((state) => state.sessionLengthMinutes)
-  const elapsedSeconds = useTimerStore((state) => state.elapsedSeconds)
   const startTimer = useTimerStore((state) => state.startTimer)
   const pauseTimer = useTimerStore((state) => state.pauseTimer)
   const cancelTimer = useTimerStore((state) => state.cancelTimer)
 
-  const isStopwatchRunningHere = isRunning && activeTaskId === task.id && timerMode === 'stopwatch'
-  const isCountdownRunningHere = isRunning && activeTaskId === task.id && timerMode === 'countdown'
-  const isTimerRunning = isStopwatchRunningHere
-  const liveSeconds = isTimerRunning ? task.actualMinutes * 60 + elapsedSeconds : null
-  const countdownSecondsLeft =
-    isCountdownRunningHere && sessionLengthMinutes != null
-      ? Math.max(0, sessionLengthMinutes * 60 - elapsedSeconds)
-      : null
+  const { isRunningHere: isTimerRunning, actualSeconds: liveSeconds } = useLiveActualSeconds(task)
+  const { isActiveHere: isCountdownRunningHere, secondsLeft: countdownSecondsLeft } = useCountdownSession(task)
 
   // TaskDetailForm remounts per task (key={task.id} below), so this only needs to read the
   // card's planned time once, at mount - no keyed-state trick needed like the overlays above.
@@ -391,27 +382,31 @@ function TaskDetailForm({
       <DialogTitle className="sr-only">{task.title}</DialogTitle>
       {/* Metadata bar */}
       <div className="flex items-center justify-between gap-3 pr-6">
-        {editingCategory ? (
-          <Input
-            autoFocus
-            value={category}
-            onChange={(event) => setCategory(event.target.value)}
-            onBlur={commitCategory}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') commitCategory()
-            }}
-            placeholder="category"
-            className="h-7 w-40 border-none bg-muted/50 px-2 text-xs shadow-none focus-visible:ring-1"
-          />
-        ) : (
-          <button
-            type="button"
-            onClick={() => setEditingCategory(true)}
-            className="rounded px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-          >
-            {task.category || 'Add category'}
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {editingCategory ? (
+            <Input
+              autoFocus
+              value={category}
+              onChange={(event) => setCategory(event.target.value)}
+              onBlur={commitCategory}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') commitCategory()
+              }}
+              placeholder="category"
+              className="h-7 w-40 border-none bg-muted/50 px-2 text-xs shadow-none focus-visible:ring-1"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setEditingCategory(true)}
+              className="rounded px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+            >
+              {task.category || 'Add category'}
+            </button>
+          )}
+
+          {task.category && <CategoryColorPicker category={task.category} />}
+        </div>
 
         <div className="flex items-center gap-1">
           {onOpenFocus && (

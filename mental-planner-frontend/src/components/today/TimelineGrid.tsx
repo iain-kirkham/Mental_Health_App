@@ -6,6 +6,7 @@ import { format, isToday } from 'date-fns'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { channelBorderClass } from '@/lib/channel-color'
+import { makeGridId, makeResizeId } from '@/lib/timeline-drag-ids'
 import type { TaskResponseDTO } from '@/types'
 
 export const GRID_START_HOUR = 6
@@ -47,14 +48,14 @@ function TimelineBlock({ task, top, height, onOpenDetail, onUnschedule }: Timeli
     setNodeRef: setMoveNodeRef,
     transform: moveTransform,
     isDragging: moveIsDragging,
-  } = useDraggable({ id: `grid-${task.id}` })
+  } = useDraggable({ id: makeGridId(task.id) })
   const {
     attributes: resizeAttributes,
     listeners: resizeListeners,
     setNodeRef: setResizeNodeRef,
     transform: resizeTransform,
     isDragging: resizeIsDragging,
-  } = useDraggable({ id: `resize-${task.id}` })
+  } = useDraggable({ id: makeResizeId(task.id) })
 
   // The resize handle is a sibling draggable, not nested inside the move draggable's own node -
   // dnd-kit doesn't support one draggable inside another, so they share the block visually but
