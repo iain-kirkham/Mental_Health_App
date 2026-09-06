@@ -1,6 +1,14 @@
+import { createElement } from "react";
 import { describe, expect, it } from "vitest";
-import { computeReorderedColumn } from "./useTasksForWeek";
-import type { TaskResponseDTO } from "@/types";
+import { renderHook, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  computeReorderedColumn,
+  mergeSubtaskChanges,
+  mergeTaskChanges,
+  useTaskMutation,
+} from "./useTasksForWeek";
+import type { SubtaskResponseDTO, TaskResponseDTO } from "@/types";
 
 function task(overrides: Partial<TaskResponseDTO> & { id: number }): TaskResponseDTO {
   return {
@@ -75,5 +83,69 @@ describe("computeReorderedColumn", () => {
     const result = computeReorderedColumn(current, { taskId: 999, destDateKey: "day1", destIndex: 0 });
 
     expect(result).toEqual([]);
+  });
+});
+
+describe("mergeTaskChanges", () => {
+  it("layers changes on top of the existing task's fields", () => {
+    const existing = task({ id: 1, title: "Original", priority: "LOW", plannedMinutes: 30 });
+
+    const merged = mergeTaskChanges(existing, { title: "Updated" });
+
+    expect(merged.title).toBe("Updated");
+    expect(merged.priority).toBe("LOW");
+    expect(merged.plannedMinutes).toBe(30);
+  });
+});
+
+describe("mergeSubtaskChanges", () => {
+  function subtask(overrides: Partial<SubtaskResponseDTO> & { id: number }): SubtaskResponseDTO {
+    return { taskId: 1, title: `Subtask ${overrides.id}`, completed: false, sortOrder: 0, plannedMinutes: null, ...overrides };
+  }
+
+  it("layers changes on top of the existing subtask's fields", () => {
+    const existing = subtask({ id: 1, title: "Original", sortOrder: 2 });
+
+    const merged = mergeSubtaskChanges(existing, { completed: true });
+
+    expect(merged.completed).toBe(true);
+    expect(merged.title).toBe("Original");
+    expect(merged.sortOrder).toBe(2);
+  });
+});
+
+describe("useTaskMutation snapshot timing", () => {
+  it("binds the snapshot from the cache as it was before the optimistic patch, not after", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const queryKey = ["tasks", "test"] as const;
+    queryClient.setQueryData<TaskResponseDTO[]>(queryKey, [task({ id: 1, title: "before" })]);
+
+    const receivedSnapshots: Array<string | undefined> = [];
+
+    const { result } = renderHook(
+      () =>
+        useTaskMutation<{ id: number; title: string }, void, string | undefined>(queryClient, queryKey, {
+          snapshot: (current, vars) => current?.find((t) => t.id === vars.id)?.title,
+          mutationFn: async (_vars, snapshot) => {
+            receivedSnapshots.push(snapshot);
+          },
+          updater: (current, vars) => current.map((t) => (t.id === vars.id ? { ...t, title: vars.title } : t)),
+          fallbackMessage: "boom",
+        }),
+      {
+        wrapper: ({ children }) => createElement(QueryClientProvider, { client: queryClient }, children),
+      }
+    );
+
+    result.current.mutate({ id: 1, title: "after" });
+
+    // The optimistic patch has already landed by the time mutationFn runs...
+    await waitFor(() => expect(queryClient.getQueryData<TaskResponseDTO[]>(queryKey)?.[0].title).toBe("after"));
+    await waitFor(() => expect(receivedSnapshots).toHaveLength(1));
+
+    // ...but the snapshot bound at `.mutate()` call time still reflects pre-patch state.
+    expect(receivedSnapshots[0]).toBe("before");
   });
 });
