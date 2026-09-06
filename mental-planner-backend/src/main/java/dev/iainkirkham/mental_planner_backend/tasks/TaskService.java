@@ -135,7 +135,10 @@ public class TaskService {
     /**
      * Verifies that a task exists and belongs to the authenticated user.
      * Used by other feature packages (e.g. pomodoro, time entries) that link records to a
-     * task without needing access to the task itself.
+     * task without needing access to the task itself. This is the intentional pattern for
+     * that case - a cross-package reference-by-ID check always goes through the referenced
+     * entity's own service, never a foreign package reaching into {@link OwnedEntityLookup}
+     * with this package's repository (see that class's Javadoc).
      *
      * @param id The ID of the task.
      * @throws ResourceNotFoundException if the task doesn't exist or doesn't belong to the user.
