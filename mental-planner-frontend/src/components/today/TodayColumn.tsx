@@ -5,6 +5,7 @@ import { format } from 'date-fns'
 import { Plus } from 'lucide-react'
 import DraggableTaskCardShell from './DraggableTaskCardShell'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { useTimerStore } from '@/store/timerStore'
 import { makeQueueId } from '@/lib/timeline-drag-ids'
 import type { TaskResponseDTO } from '@/types'
@@ -82,18 +83,28 @@ export default function TodayColumn({
           <h2 className="text-lg font-semibold text-foreground">{format(date, 'EEEE')}</h2>
           <p className="text-xs text-muted-foreground">{format(date, 'MMMM d')}</p>
         </div>
-        {plannedTotal > 0 && (
+        {tasks.length > 0 && (
           <span className="font-mono text-sm tabular-nums text-muted-foreground">
             {formatHoursMinutes(actualTotal)} / {formatHoursMinutes(plannedTotal)}
           </span>
         )}
       </div>
 
-      {plannedTotal > 0 && (
-        <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted px-1">
+      {/* Always shown once there's something to plan against - not gated behind plannedTotal,
+       * since a fresh day full of tasks with no estimate set yet would otherwise never render a
+       * bar at all (silently "not working" rather than showing an empty track). */}
+      {tasks.length > 0 && (
+        <div
+          className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted"
+          role="progressbar"
+          aria-valuenow={Math.round(progressPct)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Actual vs. planned time today"
+        >
           <div
-            className="h-full rounded-full bg-primary transition-all duration-300 ease-in-out"
-            style={{ width: `${progressPct}%` }}
+            className={cn('h-full rounded-full transition-all duration-300 ease-in-out', plannedTotal > 0 ? 'bg-status-done' : 'bg-transparent')}
+            style={{ width: plannedTotal > 0 ? `${Math.max(progressPct, actualTotal > 0 ? 2 : 0)}%` : '0%' }}
           />
         </div>
       )}
