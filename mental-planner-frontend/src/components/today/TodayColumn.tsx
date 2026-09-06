@@ -6,6 +6,7 @@ import { Plus } from 'lucide-react'
 import TaskCard from './TaskCard'
 import { Button } from '@/components/ui/button'
 import { useTimerStore } from '@/store/timerStore'
+import { makeQueueId } from '@/lib/timeline-drag-ids'
 import type { TaskResponseDTO } from '@/types'
 
 interface DraggableTaskCardProps {
@@ -20,7 +21,7 @@ interface DraggableTaskCardProps {
 /** Drag out onto the TimelineGrid to time-box the task; a plain click still opens the detail
  * modal since dnd-kit only starts a drag past the sensor's activation distance. */
 function DraggableTaskCard({ task, ...handlers }: DraggableTaskCardProps) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: `queue-${task.id}` })
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: makeQueueId(task.id) })
 
   return (
     <div ref={setNodeRef} className={isDragging ? 'opacity-40' : undefined}>
