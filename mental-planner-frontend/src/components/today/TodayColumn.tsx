@@ -3,7 +3,7 @@
 import { useDraggable } from '@dnd-kit/core'
 import { format } from 'date-fns'
 import { Plus } from 'lucide-react'
-import TaskCard from './TaskCard'
+import DraggableTaskCardShell from './DraggableTaskCardShell'
 import { Button } from '@/components/ui/button'
 import { useTimerStore } from '@/store/timerStore'
 import { makeQueueId } from '@/lib/timeline-drag-ids'
@@ -24,9 +24,14 @@ function DraggableTaskCard({ task, ...handlers }: DraggableTaskCardProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: makeQueueId(task.id) })
 
   return (
-    <div ref={setNodeRef} className={isDragging ? 'opacity-40' : undefined}>
-      <TaskCard task={task} dragHandleAttributes={attributes} dragHandleListeners={listeners} {...handlers} />
-    </div>
+    <DraggableTaskCardShell
+      task={task}
+      setNodeRef={setNodeRef}
+      attributes={attributes}
+      listeners={listeners}
+      className={isDragging ? 'opacity-40' : undefined}
+      {...handlers}
+    />
   )
 }
 
