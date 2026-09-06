@@ -97,7 +97,7 @@ public class TaskMapper {
         entity.setCompleted(dto.isCompleted());
         entity.setSortOrder(dto.getSortOrder());
         entity.setPlannedMinutes(dto.getPlannedMinutes());
-        entity.setActualMinutes(dto.getActualMinutes());
+        entity.recordTimerCheckpoint(dto.getActualMinutes());
         entity.setCategory(dto.getCategory());
         entity.setArchived(dto.isArchived());
         entity.setPriority(dto.getPriority() != null ? dto.getPriority() : TaskPriority.NORMAL);

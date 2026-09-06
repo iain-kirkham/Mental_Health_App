@@ -86,7 +86,7 @@ class TaskMapperTest {
         entity.setCompleted(true);
         entity.setSortOrder(3);
         entity.setPlannedMinutes(45);
-        entity.setActualMinutes(50);
+        entity.recordTimerCheckpoint(50);
         entity.setCategory("product");
         entity.setArchived(true);
         entity.setPriority(TaskPriority.URGENT);

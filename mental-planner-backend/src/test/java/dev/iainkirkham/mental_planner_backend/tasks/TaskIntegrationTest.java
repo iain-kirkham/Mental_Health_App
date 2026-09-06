@@ -225,7 +225,7 @@ class TaskIntegrationTest {
     @Test
     void logTimeEntry_StopwatchEntry_ShouldNotChangeActualMinutes() {
         Task task = createTaskInDb("Deep work", TestAuthenticationConfig.TEST_USER_ID);
-        task.setActualMinutes(25);
+        task.recordTimerCheckpoint(25);
         taskRepository.save(task);
 
         TaskTimeEntryRequestDTO requestDTO = new TaskTimeEntryRequestDTO();
@@ -252,7 +252,7 @@ class TaskIntegrationTest {
     @Test
     void logTimeEntry_CountdownEntry_ShouldNotChangeActualMinutes() {
         Task task = createTaskInDb("Deep work", TestAuthenticationConfig.TEST_USER_ID);
-        task.setActualMinutes(25);
+        task.recordTimerCheckpoint(25);
         taskRepository.save(task);
 
         TaskTimeEntryRequestDTO requestDTO = new TaskTimeEntryRequestDTO();
@@ -279,7 +279,7 @@ class TaskIntegrationTest {
     @Test
     void logTimeEntry_ManualEntry_ShouldAddToActualMinutes() {
         Task task = createTaskInDb("Deep work", TestAuthenticationConfig.TEST_USER_ID);
-        task.setActualMinutes(10);
+        task.recordTimerCheckpoint(10);
         taskRepository.save(task);
 
         TaskTimeEntryRequestDTO requestDTO = new TaskTimeEntryRequestDTO();
@@ -301,7 +301,7 @@ class TaskIntegrationTest {
     @Test
     void deleteTimeEntry_ManualEntry_ShouldSubtractFromActualMinutes() {
         Task task = createTaskInDb("Deep work", TestAuthenticationConfig.TEST_USER_ID);
-        task.setActualMinutes(20);
+        task.recordTimerCheckpoint(20);
         taskRepository.save(task);
 
         TaskTimeEntry entry = new TaskTimeEntry();
@@ -327,7 +327,7 @@ class TaskIntegrationTest {
     @Test
     void deleteTimeEntry_StopwatchEntry_ShouldLeaveActualMinutesUnchanged() {
         Task task = createTaskInDb("Deep work", TestAuthenticationConfig.TEST_USER_ID);
-        task.setActualMinutes(30);
+        task.recordTimerCheckpoint(30);
         taskRepository.save(task);
 
         TaskTimeEntry entry = new TaskTimeEntry();
@@ -352,7 +352,7 @@ class TaskIntegrationTest {
     @Test
     void deleteTimeEntry_CountdownEntry_ShouldLeaveActualMinutesUnchanged() {
         Task task = createTaskInDb("Deep work", TestAuthenticationConfig.TEST_USER_ID);
-        task.setActualMinutes(25);
+        task.recordTimerCheckpoint(25);
         taskRepository.save(task);
 
         TaskTimeEntry entry = new TaskTimeEntry();

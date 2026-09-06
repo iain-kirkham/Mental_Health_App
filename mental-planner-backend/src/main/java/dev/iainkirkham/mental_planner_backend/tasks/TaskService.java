@@ -208,7 +208,7 @@ public class TaskService {
     @Transactional
     public TaskResponseDTO updateActualMinutes(Long id, ActualMinutesRequestDTO requestDTO) {
         Task task = findOwnedTask(id);
-        task.setActualMinutes(requestDTO.getActualMinutes());
+        task.recordTimerCheckpoint(requestDTO.getActualMinutes());
         Task saved = taskRepository.save(task);
         return withSubtasks(saved);
     }
@@ -306,10 +306,10 @@ public class TaskService {
     }
 
     /**
-     * Logs a time entry against a task owned by the authenticated user. A stopwatch entry
-     * (one continuous run, already reflected in {@link Task#getActualMinutes()} via the
-     * separate pause/stop persist) is recorded as history only. A manual entry has no other
-     * path to update the total, so it's added onto {@link Task#getActualMinutes()} directly.
+     * Logs a time entry against a task owned by the authenticated user. A stopwatch/countdown
+     * entry is recorded as history only, since its run is already reflected in the tracked
+     * total via the separate {@link Task#recordTimerCheckpoint} persist. A manual entry has no
+     * other path to update the total, so it's applied via {@link Task#applyManualEntry}.
      *
      * @param taskId The parent task's ID.
      * @param requestDTO The time entry to log.
@@ -325,7 +325,7 @@ public class TaskService {
         TaskTimeEntry saved = taskTimeEntryRepository.save(entry);
 
         if (requestDTO.getSource() == TimeEntrySource.MANUAL) {
-            task.setActualMinutes(task.getActualMinutes() + requestDTO.getMinutes());
+            task.applyManualEntry(requestDTO.getMinutes());
             taskRepository.save(task);
         }
 
@@ -334,9 +334,10 @@ public class TaskService {
 
     /**
      * Deletes a time entry belonging to a task owned by the authenticated user. Deleting a
-     * manual entry unwinds its minutes from {@link Task#getActualMinutes()} (clamped at 0);
-     * deleting a stopwatch entry only removes the history row, since the total was already
-     * kept correct by the stopwatch's own pause/stop persist.
+     * manual entry unwinds its minutes from the tracked total via {@link Task#unwindManualEntry}
+     * (clamped at 0); deleting a stopwatch/countdown entry only removes the history row, since
+     * the total was already kept correct by that run's own {@link Task#recordTimerCheckpoint}
+     * persist.
      *
      * @param taskId The parent task's ID.
      * @param entryId The time entry's ID.
@@ -344,14 +345,13 @@ public class TaskService {
      */
     @Transactional
     public void deleteTimeEntry(Long taskId, Long entryId) {
-        findOwnedTask(taskId);
+        Task task = findOwnedTask(taskId);
         String userId = authenticationContext.getCurrentUserId();
         TaskTimeEntry entry = taskTimeEntryRepository.findByIdAndTaskIdAndUserId(entryId, taskId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Time entry not found with ID: " + entryId));
 
         if (entry.getSource() == TimeEntrySource.MANUAL) {
-            Task task = findOwnedTask(taskId);
-            task.setActualMinutes(Math.max(0, task.getActualMinutes() - entry.getMinutes()));
+            task.unwindManualEntry(entry.getMinutes());
             taskRepository.save(task);
         }
 
