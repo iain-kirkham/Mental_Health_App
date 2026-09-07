@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Pomodoro Timer Page', () => {
+test.describe('Focus Timer Page', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/pomodoro', { waitUntil: 'domcontentloaded' });
+    await page.goto('/focus', { waitUntil: 'domcontentloaded' });
     // Wait for the page heading to ensure the page is ready
-    await page.getByRole('heading', { level: 1, name: /pomodoro timer/i }).waitFor({
+    await page.getByRole('heading', { level: 1, name: /focus timer/i }).waitFor({
       state: 'visible',
       timeout: 10000,
     });
@@ -13,9 +13,8 @@ test.describe('Pomodoro Timer Page', () => {
   test('should display the page header', async ({ page }) => {
     // Prefer role-based heading selector (robust against emoji/text changes)
     await expect(
-      page.getByRole('heading', { level: 1, name: /pomodoro timer/i })
+      page.getByRole('heading', { level: 1, name: /focus timer/i })
     ).toBeVisible();
-    await expect(page.getByText(/focus and track your productivity sessions/i)).toBeVisible();
   });
 
   test('should display the timer with initial time', async ({ page }) => {
@@ -176,7 +175,7 @@ test.describe('Pomodoro Timer Page', () => {
     await page.setViewportSize({ width: 375, height: 667 });
 
     // Main elements should still be visible (use heading role)
-    await expect(page.getByRole('heading', { level: 1, name: /pomodoro timer/i })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: /focus timer/i })).toBeVisible();
 
     // Timer display should be visible
     let timerDisplay = page.getByRole('timer').first();

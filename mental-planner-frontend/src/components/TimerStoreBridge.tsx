@@ -3,12 +3,15 @@
 import { useCallback, useEffect } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { toast } from 'sonner'
-import { logTaskTimeEntry, updateActualMinutes } from '@/lib/tasks-api'
+import { logTimeEntry, updateActualMinutes } from '@/lib/tasks-api'
 import { useTimerStore } from '@/store/timerStore'
+import { beginFocusEntry } from '@/lib/focusEntryHandoff'
 import { toFriendlyMessage } from '@/lib/connectivity'
 import type { TimeEntrySource } from '@/types'
 
-type LoggedStopwatchRun = {
+type LoggedRun = {
+  taskId: number | null
+  runKey: string
   startedAt: string
   endedAt: string
   minutes: number
@@ -43,16 +46,35 @@ export function TimerStoreBridge() {
   )
 
   const logEntry = useCallback(
-    (taskId: number, entry: LoggedStopwatchRun) => {
-      void (async () => {
+    (run: LoggedRun) => {
+      // Registered synchronously (before the POST resolves) so a reflection submitted while
+      // this is still in flight can still find it - see focusEntryHandoff.
+      const entryIdPromise = (async (): Promise<number | null> => {
         try {
-          await logTaskTimeEntry(taskId, { ...entry, note: null }, getToken)
+          const created = await logTimeEntry(
+            {
+              taskId: run.taskId,
+              startedAt: run.startedAt,
+              endedAt: run.endedAt,
+              minutes: run.minutes,
+              entryDate: run.entryDate,
+              source: run.source,
+              notes: null,
+              score: null,
+              energyRating: null,
+            },
+            getToken
+          )
+          return created.id
         } catch (error) {
           // Non-fatal: a lost history row shouldn't block the timer or the actualMinutes total,
           // which was already persisted separately via `persist` above.
           toast.error(toFriendlyMessage(error, 'Unable to save time entry.'))
+          return null
         }
       })()
+
+      beginFocusEntry(run.runKey, entryIdPromise)
     },
     [getToken]
   )

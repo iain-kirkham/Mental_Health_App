@@ -17,8 +17,9 @@ import PriorityPicker from './PriorityPicker'
 import CategoryColorPicker from './CategoryColorPicker'
 import { cn } from '@/lib/utils'
 import { useTimerStore } from '@/store/timerStore'
-import { useCountdownSession, useLiveActualSeconds } from '@/hooks/useTaskTimer'
+import { useFocusSession, useLiveActualSeconds } from '@/hooks/useTaskTimer'
 import useTaskTimeEntries from '@/hooks/useTaskTimeEntries'
+import { getScoreEmoji } from '@/lib/focus-format'
 import type { SubtaskResponseDTO, TaskPriority, TaskResponseDTO, TaskTimeEntryResponseDTO } from '@/types'
 
 interface TaskDetailModalProps {
@@ -227,7 +228,7 @@ function TimeHistoryPanel({ taskId }: { taskId: number }) {
     event.preventDefault()
     const minutes = Math.max(0, Number(manualMinutes) || 0)
     if (minutes <= 0) return
-    addManualEntry({ entryDate: manualDate, minutes, note: manualNote.trim() || null })
+    addManualEntry({ entryDate: manualDate, minutes, notes: manualNote.trim() || null })
     setManualMinutes('')
     setManualNote('')
   }
@@ -283,13 +284,16 @@ function TimeHistoryPanel({ taskId }: { taskId: number }) {
                   <li key={entry.id} className="flex items-center gap-2 text-xs">
                     {entry.source === 'MANUAL' ? (
                       <Pencil className="h-3 w-3 shrink-0 text-muted-foreground" />
-                    ) : entry.source === 'COUNTDOWN' ? (
+                    ) : entry.source === 'FOCUS' ? (
                       <Zap className="h-3 w-3 shrink-0 text-muted-foreground" />
                     ) : (
                       <TimerIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
                     )}
                     <span className="font-mono tabular-nums">{formatDuration(entry.minutes)}</span>
-                    {entry.note && <span className="truncate text-muted-foreground">{entry.note}</span>}
+                    {entry.score != null && (
+                      <span aria-hidden="true">{getScoreEmoji(entry.score)}</span>
+                    )}
+                    {entry.notes && <span className="truncate text-muted-foreground">{entry.notes}</span>}
                     <Button
                       type="button"
                       variant="ghost"
@@ -329,7 +333,7 @@ function TaskDetailForm({
   const cancelTimer = useTimerStore((state) => state.cancelTimer)
 
   const { isRunningHere: isTimerRunning, actualSeconds: liveSeconds } = useLiveActualSeconds(task)
-  const { isActiveHere: isCountdownRunningHere, secondsLeft: countdownSecondsLeft } = useCountdownSession(task)
+  const { isActiveHere: isFocusRunningHere, secondsLeft: focusSecondsLeft } = useFocusSession(task)
 
   // TaskDetailForm remounts per task (key={task.id} below), so this only needs to read the
   // card's planned time once, at mount - no keyed-state trick needed like the overlays above.
@@ -467,15 +471,15 @@ function TaskDetailForm({
             size="icon"
             className={cn('h-8 w-8 rounded-full', isTimerRunning && 'text-status-active')}
             onClick={() => (isTimerRunning ? pauseTimer() : startTimer(task.id, task.actualMinutes))}
-            disabled={isCountdownRunningHere}
-            aria-label={isCountdownRunningHere ? 'Focus session in progress' : isTimerRunning ? 'Pause timer' : 'Start timer'}
+            disabled={isFocusRunningHere}
+            aria-label={isFocusRunningHere ? 'Focus session in progress' : isTimerRunning ? 'Pause timer' : 'Start timer'}
           >
             {isTimerRunning ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
           </Button>
-          {isCountdownRunningHere ? (
+          {isFocusRunningHere ? (
             <div className="flex items-center gap-1.5">
               <span className="font-mono text-sm font-semibold tabular-nums text-status-active">
-                {countdownSecondsLeft != null ? formatLiveTime(countdownSecondsLeft) : null}
+                {focusSecondsLeft != null ? formatLiveTime(focusSecondsLeft) : null}
               </span>
               <Button
                 type="button"
@@ -518,7 +522,7 @@ function TaskDetailForm({
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7 rounded-full"
-                onClick={() => startTimer(task.id, task.actualMinutes, { mode: 'countdown', sessionLengthMinutes: selectedPreset })}
+                onClick={() => startTimer(task.id, task.actualMinutes, { mode: 'focus', sessionLengthMinutes: selectedPreset })}
                 aria-label="Start focus session"
               >
                 <Zap className="h-3.5 w-3.5" />

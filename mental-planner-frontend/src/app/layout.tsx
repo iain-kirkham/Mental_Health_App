@@ -9,8 +9,8 @@ import {
 
 import { Navbar } from '@/components/Navbar'
 import { ThemeProvider } from '@/components/theme-provider'
-import { PomodoroSessionProvider } from '@/contexts/PomodoroSessionContext'
-import { GlobalPomodoroModal } from '@/components/GlobalPomodoroModal'
+import { FocusReflectionProvider } from '@/contexts/FocusReflectionContext'
+import { GlobalFocusReflectionModal } from '@/components/GlobalFocusReflectionModal'
 import { TimerStoreBridge } from '@/components/TimerStoreBridge'
 import { QueryProvider } from '@/components/QueryProvider'
 
@@ -43,12 +43,12 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <ClerkProvider>
             <QueryProvider>
-              <PomodoroSessionProvider>
+              <FocusReflectionProvider>
                 <TimerStoreBridge />
                 <Navbar />
                 {children}
-                <GlobalPomodoroModal />
-              </PomodoroSessionProvider>
+                <GlobalFocusReflectionModal />
+              </FocusReflectionProvider>
             </QueryProvider>
           </ClerkProvider>
         </ThemeProvider>

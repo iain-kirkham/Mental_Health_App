@@ -9,13 +9,13 @@ import type { TaskResponseDTO } from '@/types'
 export interface TimerSnapshot {
   activeTaskId: number | null
   isRunning: boolean
-  mode: 'stopwatch' | 'countdown'
+  mode: 'stopwatch' | 'focus'
   sessionLengthMinutes: number | null
   elapsedSeconds: number
 }
 
-export interface CountdownView {
-  /** The active countdown session (if any) belongs to this task. */
+export interface FocusSessionView {
+  /** The active Focus session (if any) belongs to this task. */
   isActiveHere: boolean
   /** Ticking right now, as opposed to this task's session being active but paused. */
   running: boolean
@@ -27,14 +27,14 @@ export interface CountdownView {
 }
 
 export interface LiveActualView {
-  /** A stopwatch run (not a countdown session) is active for this task. */
+  /** A stopwatch run (not a Focus session) is active for this task. */
   isRunningHere: boolean
   /** null whenever !isRunningHere; otherwise the task's stored actualMinutes plus elapsed ticking. */
   actualSeconds: number | null
 }
 
-export function computeCountdownView(snapshot: TimerSnapshot, task: TaskResponseDTO | null): CountdownView {
-  const isActiveHere = task !== null && snapshot.activeTaskId === task.id && snapshot.mode === 'countdown'
+export function computeFocusSessionView(snapshot: TimerSnapshot, task: TaskResponseDTO | null): FocusSessionView {
+  const isActiveHere = task !== null && snapshot.activeTaskId === task.id && snapshot.mode === 'focus'
   const running = snapshot.isRunning && isActiveHere
   const secondsLeft =
     isActiveHere && snapshot.sessionLengthMinutes !== null
@@ -60,8 +60,8 @@ function useTimerSnapshot(): TimerSnapshot {
   return { activeTaskId, isRunning, mode, sessionLengthMinutes, elapsedSeconds }
 }
 
-export function useCountdownSession(task: TaskResponseDTO | null): CountdownView {
-  return computeCountdownView(useTimerSnapshot(), task)
+export function useFocusSession(task: TaskResponseDTO | null): FocusSessionView {
+  return computeFocusSessionView(useTimerSnapshot(), task)
 }
 
 export function useLiveActualSeconds(task: TaskResponseDTO | null): LiveActualView {

@@ -156,7 +156,7 @@ export function useTaskMutation<TVars, TResult, TSnapshot = undefined>(
       ? (result: TResult, bound: Bound) => config.onSuccess!(result, bound.vars)
       : undefined,
     onSettled: () => {
-      // Other task-list caches elsewhere in the app (e.g. the Pomodoro page's single-day
+      // Other task-list caches elsewhere in the app (e.g. the focus timer page's single-day
       // query) use a different queryKey and don't share this hook's optimistic update, so
       // they'd otherwise sit stale for up to staleTime after a task changes here.
       void queryClient.invalidateQueries({ queryKey: ["tasks"] });

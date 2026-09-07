@@ -6,10 +6,10 @@ test.describe('Navigation and Integration', () => {
     await page.goto('/');
     await expect(page).toHaveURL('/');
 
-    // Navigate to Pomodoro
-    await page.getByRole('link', { name: /Pomodoro Timer/ }).click();
-    await expect(page).toHaveURL('/pomodoro');
-    await expect(page.getByRole('heading', { level: 1, name: /pomodoro timer/i })).toBeVisible();
+    // Navigate to Focus
+    await page.getByRole('link', { name: /Focus sessions/ }).click();
+    await expect(page).toHaveURL('/focus');
+    await expect(page.getByRole('heading', { level: 1, name: /focus timer/i })).toBeVisible();
 
     // Navigate back to home (assuming there's a navigation element)
     await page.goto('/');
@@ -33,9 +33,9 @@ test.describe('Navigation and Integration', () => {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'ADHD Focus Companion' })).toBeVisible();
 
-    // Direct navigation to Pomodoro
-    await page.goto('/pomodoro');
-    await expect(page.getByRole('heading', { level: 1, name: /pomodoro timer/i })).toBeVisible();
+    // Direct navigation to Focus
+    await page.goto('/focus');
+    await expect(page.getByRole('heading', { level: 1, name: /focus timer/i })).toBeVisible();
 
     // Direct navigation to Mood Tracker
     await page.goto('/mood-tracker');
@@ -58,11 +58,11 @@ test.describe('Navigation and Integration', () => {
       await homeHeading.waitFor({ state: 'visible', timeout: 10000 });
       await expect(homeHeading).toBeVisible();
 
-      // Test Pomodoro page
-      await page.goto('/pomodoro');
-      const pomodoroHeading = page.getByRole('heading', { level: 1, name: /pomodoro timer/i });
-      await pomodoroHeading.waitFor({ state: 'visible', timeout: 10000 });
-      await expect(pomodoroHeading).toBeVisible();
+      // Test Focus page
+      await page.goto('/focus');
+      const focusHeading = page.getByRole('heading', { level: 1, name: /focus timer/i });
+      await focusHeading.waitFor({ state: 'visible', timeout: 10000 });
+      await expect(focusHeading).toBeVisible();
 
       // Test Mood Tracker page
       await page.goto('/mood-tracker');
@@ -74,7 +74,7 @@ test.describe('Navigation and Integration', () => {
 
   test('should have consistent header/navigation across pages', async ({ page }) => {
     // Check if there's a navbar/header present on all pages
-    const pages = ['/', '/pomodoro', '/mood-tracker'];
+    const pages = ['/', '/focus', '/mood-tracker'];
 
     for (const pagePath of pages) {
       await page.goto(pagePath);
@@ -120,18 +120,18 @@ test.describe('Navigation and Integration', () => {
       throw new Error(`Failed to load home page after retries: ${lastError.message}`);
     }
 
-    // Scope to navigation region to find the Pomodoro link reliably
-    const pomodoroNavLink = page.getByRole('navigation').getByRole('link', { name: /Pomodoro/i }).first();
+    // Scope to navigation region to find the Focus link reliably
+    const focusNavLink = page.getByRole('navigation').getByRole('link', { name: /Focus/i }).first();
     // Wait briefly for nav to appear and then click
-    await expect(pomodoroNavLink).toBeVisible({ timeout: 5000 });
-    await pomodoroNavLink.click();
-    // Verify we reached the Pomodoro page, with a short timeout
+    await expect(focusNavLink).toBeVisible({ timeout: 5000 });
+    await focusNavLink.click();
+    // Verify we reached the Focus page, with a short timeout
     try {
-      await expect(page).toHaveURL('/pomodoro', { timeout: 5000 });
+      await expect(page).toHaveURL('/focus', { timeout: 5000 });
     } catch (e) {
       // Fallback: navigate directly if the link didn't work but the route should be reachable
-      await page.goto('/pomodoro', { waitUntil: 'networkidle' });
-      await expect(page.getByRole('heading', { level: 1, name: /pomodoro timer/i })).toBeVisible();
+      await page.goto('/focus', { waitUntil: 'networkidle' });
+      await expect(page.getByRole('heading', { level: 1, name: /focus timer/i })).toBeVisible();
     }
 
     // Go back
@@ -140,7 +140,7 @@ test.describe('Navigation and Integration', () => {
 
     // Go forward
     await page.goForward();
-    await expect(page).toHaveURL('/pomodoro');
+    await expect(page).toHaveURL('/focus');
   });
 
   test('should load all pages without console errors', async ({ page }) => {
@@ -175,7 +175,7 @@ test.describe('Navigation and Integration', () => {
     });
 
     // Visit all pages with retry logic for rate limiting
-    const pageUrls = ['/', '/pomodoro', '/mood-tracker'];
+    const pageUrls = ['/', '/focus', '/mood-tracker'];
 
     for (const pageUrl of pageUrls) {
       let loaded = false;
@@ -250,10 +250,10 @@ test.describe('Navigation and Integration', () => {
       expect(homeTitle.length).toBeGreaterThan(0);
     }
 
-    // Check Pomodoro page title
-    if (await navigateWithRetry('/pomodoro')) {
-      const pomodoroTitle = await page.title();
-      expect(pomodoroTitle.length).toBeGreaterThan(0);
+    // Check Focus page title
+    if (await navigateWithRetry('/focus')) {
+      const focusTitle = await page.title();
+      expect(focusTitle.length).toBeGreaterThan(0);
     }
 
     // Check Mood Tracker page title
@@ -270,7 +270,7 @@ test.describe('Navigation and Integration', () => {
   });
 
   test('should be accessible on all pages', async ({ page }) => {
-    const pageUrls = ['/', '/pomodoro', '/mood-tracker'];
+    const pageUrls = ['/', '/focus', '/mood-tracker'];
 
     // Helper to compute a best-effort accessible name for a button
     const getButtonAccessibleName = async (btn: import('@playwright/test').Locator): Promise<string> => {
@@ -329,7 +329,7 @@ test.describe('Navigation and Integration', () => {
   });
 
   test('should maintain state when navigating between pages', async ({ page }) => {
-    await page.goto('/pomodoro');
+    await page.goto('/focus');
     const timeInput = page.locator('input[type="number"]').first();
     if (await timeInput.isVisible()) {
       await timeInput.clear();
@@ -338,9 +338,9 @@ test.describe('Navigation and Integration', () => {
 
     // Navigate away and back
     await page.goto('/');
-    await page.goto('/pomodoro');
+    await page.goto('/focus');
 
     // Verify page loaded correctly
-    await expect(page.getByRole('heading', { level: 1, name: /pomodoro timer/i })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: /focus timer/i })).toBeVisible();
   });
 });

@@ -8,10 +8,10 @@ import java.util.function.BiFunction;
 
 /**
  * Shared seam for the "find an entity scoped to the current user, or 404" idiom
- * repeated across every feature service (tasks, pomodoro sessions, mood entries).
+ * repeated across every feature service (tasks, time entries, mood entries).
  * <p>
  * This is for a service verifying ownership of <i>its own</i> entity. A service that only
- * references another domain's entity by ID (e.g. pomodoro linking to a Task) doesn't use this
+ * references another domain's entity by ID (e.g. a time entry linking to a Task) doesn't use this
  * directly - it goes through that owning service's own ownership check instead (see e.g.
  * {@code TaskService.assertOwnedByCurrentUser}), since only the owning service's repository
  * knows the real query and any business rules layered onto it later.

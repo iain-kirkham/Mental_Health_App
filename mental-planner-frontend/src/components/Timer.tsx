@@ -11,14 +11,14 @@ import StatusAlerts from "@/components/StatusAlerts";
 import PageHeader from "@/components/PageHeader";
 import { TimerDisplay } from "./TimerDisplay";
 import { TimerControls } from "./TimerControls";
-import { usePomodoroSessionContext } from "@/contexts/PomodoroSessionContext";
+import { useFocusReflectionContext } from "@/contexts/FocusReflectionContext";
 import { useTimerStore } from "@/store/timerStore";
 import { getTasksForDate } from "@/lib/tasks-api";
 
 const DEFAULT_MINUTES = 5;
 
 export default function Timer() {
-    const { submitStatus, errorMessage } = usePomodoroSessionContext();
+    const { submitStatus, errorMessage } = useFocusReflectionContext();
     const { getToken } = useAuth();
 
     const mode = useTimerStore((state) => state.mode);
@@ -39,14 +39,14 @@ export default function Timer() {
         queryFn: () => getTasksForDate(todayKey, getToken),
     });
 
-    // A countdown session in progress (running or paused mid-session) elsewhere overrides the
+    // A Focus session in progress (running or paused mid-session) elsewhere overrides the
     // uncommitted local duration/task choice below - this page reflects whatever's actually
     // accumulating in the shared timer, not a second, disconnected "what I meant to start" state.
-    const hasCountdownProgress = mode === "countdown" && sessionLengthMinutes !== null;
-    const isRunning = storeIsRunning && mode === "countdown";
-    const totalTime = hasCountdownProgress ? sessionLengthMinutes * 60 : inputTime * 60;
-    const timeLeft = hasCountdownProgress ? Math.max(0, totalTime - elapsedSeconds) : inputTime * 60;
-    const showAlert = false; // countdown-expiry alert now happens via the reflection form opening itself
+    const hasFocusProgress = mode === "focus" && sessionLengthMinutes !== null;
+    const isRunning = storeIsRunning && mode === "focus";
+    const totalTime = hasFocusProgress ? sessionLengthMinutes * 60 : inputTime * 60;
+    const timeLeft = hasFocusProgress ? Math.max(0, totalTime - elapsedSeconds) : inputTime * 60;
+    const showAlert = false; // focus-session-expiry alert now happens via the reflection form opening itself
 
     const setInputTime = (minutes: number) => {
         if (isNaN(minutes) || minutes <= 0) return;
@@ -71,11 +71,11 @@ export default function Timer() {
             pauseTimer();
             return;
         }
-        const taskId = hasCountdownProgress ? activeTaskId : selectedTaskId;
+        const taskId = hasFocusProgress ? activeTaskId : selectedTaskId;
         const currentActualMinutes = taskId
             ? (todaysTasks.find((t) => t.id === taskId)?.actualMinutes ?? 0)
             : 0;
-        startTimer(taskId, currentActualMinutes, { mode: "countdown", sessionLengthMinutes: inputTime });
+        startTimer(taskId, currentActualMinutes, { mode: "focus", sessionLengthMinutes: inputTime });
     };
 
     const reset = () => {
@@ -86,7 +86,7 @@ export default function Timer() {
     return (
         <>
             <PageHeader title="Focus timer">
-                <Link href="/pomodoro/history">
+                <Link href="/focus/history">
                     <Button variant="ghost" size="sm">
                         <History className="mr-2 h-4 w-4" />
                         View session history
@@ -114,9 +114,9 @@ export default function Timer() {
                     <div className="w-full mt-8">
                         <TaskLinkPicker
                             tasks={todaysTasks}
-                            selectedTaskId={hasCountdownProgress ? activeTaskId : selectedTaskId}
+                            selectedTaskId={hasFocusProgress ? activeTaskId : selectedTaskId}
                             onChange={handleSelectTask}
-                            disabled={hasCountdownProgress}
+                            disabled={hasFocusProgress}
                             isLoading={isLoadingTasks}
                         />
                         <TimerControls
@@ -125,7 +125,7 @@ export default function Timer() {
                             onReset={reset}
                             inputTime={inputTime}
                             onInputChange={handleTimeChange}
-                            disabledInput={hasCountdownProgress}
+                            disabledInput={hasFocusProgress}
                         />
                     </div>
                 </div>
@@ -153,9 +153,9 @@ export default function Timer() {
                         <div className="w-full space-y-4">
                             <TaskLinkPicker
                                 tasks={todaysTasks}
-                                selectedTaskId={hasCountdownProgress ? activeTaskId : selectedTaskId}
+                                selectedTaskId={hasFocusProgress ? activeTaskId : selectedTaskId}
                                 onChange={handleSelectTask}
-                                disabled={hasCountdownProgress}
+                                disabled={hasFocusProgress}
                                 isLoading={isLoadingTasks}
                             />
                             <TimerControls
@@ -164,7 +164,7 @@ export default function Timer() {
                                 onReset={reset}
                                 inputTime={inputTime}
                                 onInputChange={handleTimeChange}
-                                disabledInput={hasCountdownProgress}
+                                disabledInput={hasFocusProgress}
                             />
                         </div>
                     </div>
@@ -189,11 +189,11 @@ function TaskLinkPicker({
 }) {
     return (
         <div>
-            <label htmlFor="pomodoro-task-link" className="block text-sm font-semibold mb-2 text-foreground">
+            <label htmlFor="focus-task-link" className="block text-sm font-semibold mb-2 text-foreground">
                 Track time against (optional)
             </label>
             <select
-                id="pomodoro-task-link"
+                id="focus-task-link"
                 value={selectedTaskId ?? ""}
                 onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
                 disabled={disabled || isLoading}

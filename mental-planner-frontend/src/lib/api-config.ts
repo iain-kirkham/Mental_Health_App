@@ -6,7 +6,7 @@ import { reportFetchOutcome, reportFetchSuccess } from '@/lib/connectivity';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 export const API_ENDPOINTS = {
-  pomodoro: `${API_BASE_URL}/api/pomodoro`,
+  timeEntries: `${API_BASE_URL}/api/time-entries`,
   mood: `${API_BASE_URL}/api/mood`,
   tasks: `${API_BASE_URL}/api/tasks`,
 } as const;

@@ -1,28 +1,7 @@
 // Types for ADHD Focus Companion
 
-// Pomodoro Session Types
+// Focus session rating types
 export type EnergyRating = 'ENERGIZING' | 'DRAINING';
-
-export interface PomodoroSessionCreationDTO {
-    startTime: string | null;
-    endTime: string;
-    duration: number;
-    score: number;
-    notes: string;
-    energyRating: EnergyRating | null;
-    taskId: number | null;
-}
-
-export interface PomodoroSessionResponseDTO {
-    id: number;
-    startTime: string | null;
-    endTime: string;
-    duration: number;
-    score: number;
-    notes: string;
-    energyRating: EnergyRating | null;
-    taskId: number | null;
-}
 
 // Task Types (daily planner)
 export type TaskPriority = 'URGENT' | 'HIGH' | 'NORMAL' | 'LOW';
@@ -64,20 +43,28 @@ export interface SubtaskResponseDTO extends SubtaskRequestDTO {
     taskId: number;
 }
 
-export type TimeEntrySource = 'STOPWATCH' | 'MANUAL' | 'COUNTDOWN';
+export type TimeEntrySource = 'STOPWATCH' | 'MANUAL' | 'FOCUS';
 
 export interface TaskTimeEntryRequestDTO {
+    taskId: number | null; // null for a task-less Focus session
     startedAt: string | null; // ISO instant, null for manual entries
     endedAt: string | null; // ISO instant, null for manual entries
     minutes: number;
     entryDate: string; // "YYYY-MM-DD"
     source: TimeEntrySource;
-    note: string | null;
+    notes: string | null;
+    score: number | null; // Focus session quality, 1-5
+    energyRating: EnergyRating | null;
 }
 
 export interface TaskTimeEntryResponseDTO extends TaskTimeEntryRequestDTO {
     id: number;
-    taskId: number;
+}
+
+export interface TimeEntryReflectionRequestDTO {
+    score: number | null;
+    notes: string | null;
+    energyRating: EnergyRating | null;
 }
 
 // Mood Entry Types

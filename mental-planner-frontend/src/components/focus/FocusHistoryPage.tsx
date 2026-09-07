@@ -4,14 +4,14 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import PomodoroHistory from '@/components/pomodoro/PomodoroHistory';
+import FocusHistory from '@/components/focus/FocusHistory';
 import PageHeader from '@/components/PageHeader';
 
-export default function PomodoroHistoryPage() {
+export default function FocusHistoryPage() {
     return (
         <>
             <PageHeader title="Session history">
-                <Link href="/pomodoro">
+                <Link href="/focus">
                     <Button variant="ghost" size="sm">
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Back to timer
@@ -20,7 +20,7 @@ export default function PomodoroHistoryPage() {
             </PageHeader>
 
             <div className="px-3 py-3 md:px-4">
-                <PomodoroHistory />
+                <FocusHistory />
             </div>
         </>
     );

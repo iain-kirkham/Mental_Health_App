@@ -11,10 +11,10 @@ const tools = [
     cta: 'Open planner',
   },
   {
-    href: '/pomodoro',
+    href: '/focus',
     icon: Timer,
     name: 'Focus sessions',
-    description: 'Run a Pomodoro timer against a task, or just start one and see where it goes.',
+    description: 'Run a focus timer against a task, or just start one and see where it goes.',
     cta: 'Start a session',
   },
   {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeCountdownView, computeLiveActualView, type TimerSnapshot } from "./useTaskTimer";
+import { computeFocusSessionView, computeLiveActualView, type TimerSnapshot } from "./useTaskTimer";
 import type { TaskResponseDTO } from "@/types";
 
 function task(overrides: Partial<TaskResponseDTO> & { id: number }): TaskResponseDTO {
@@ -32,9 +32,9 @@ function snapshot(overrides: Partial<TimerSnapshot> = {}): TimerSnapshot {
   };
 }
 
-describe("computeCountdownView", () => {
+describe("computeFocusSessionView", () => {
   it("is inactive when no task is given", () => {
-    const view = computeCountdownView(snapshot({ activeTaskId: 1, isRunning: true, mode: "countdown" }), null);
+    const view = computeFocusSessionView(snapshot({ activeTaskId: 1, isRunning: true, mode: "focus" }), null);
     expect(view.isActiveHere).toBe(false);
     expect(view.running).toBe(false);
     expect(view.secondsLeft).toBeNull();
@@ -42,21 +42,21 @@ describe("computeCountdownView", () => {
 
   it("is inactive when the active task is a different one", () => {
     const t = task({ id: 1 });
-    const view = computeCountdownView(snapshot({ activeTaskId: 2, isRunning: true, mode: "countdown" }), t);
+    const view = computeFocusSessionView(snapshot({ activeTaskId: 2, isRunning: true, mode: "focus" }), t);
     expect(view.isActiveHere).toBe(false);
   });
 
   it("is inactive when the store is in stopwatch mode", () => {
     const t = task({ id: 1 });
-    const view = computeCountdownView(snapshot({ activeTaskId: 1, isRunning: true, mode: "stopwatch" }), t);
+    const view = computeFocusSessionView(snapshot({ activeTaskId: 1, isRunning: true, mode: "stopwatch" }), t);
     expect(view.isActiveHere).toBe(false);
     expect(view.secondsLeft).toBeNull();
   });
 
-  it("reports active + running + remaining seconds during a countdown for this task", () => {
+  it("reports active + running + remaining seconds during a Focus session for this task", () => {
     const t = task({ id: 1 });
-    const view = computeCountdownView(
-      snapshot({ activeTaskId: 1, isRunning: true, mode: "countdown", sessionLengthMinutes: 25, elapsedSeconds: 60 }),
+    const view = computeFocusSessionView(
+      snapshot({ activeTaskId: 1, isRunning: true, mode: "focus", sessionLengthMinutes: 25, elapsedSeconds: 60 }),
       t
     );
     expect(view.isActiveHere).toBe(true);
@@ -64,10 +64,10 @@ describe("computeCountdownView", () => {
     expect(view.secondsLeft).toBe(25 * 60 - 60);
   });
 
-  it("reports active but not running when this task's session is paused", () => {
+  it("reports active but not running when this task's Focus session is paused", () => {
     const t = task({ id: 1 });
-    const view = computeCountdownView(
-      snapshot({ activeTaskId: 1, isRunning: false, mode: "countdown", sessionLengthMinutes: 25, elapsedSeconds: 60 }),
+    const view = computeFocusSessionView(
+      snapshot({ activeTaskId: 1, isRunning: false, mode: "focus", sessionLengthMinutes: 25, elapsedSeconds: 60 }),
       t
     );
     expect(view.isActiveHere).toBe(true);
@@ -76,8 +76,8 @@ describe("computeCountdownView", () => {
 
   it("floors secondsLeft at 0 rather than going negative", () => {
     const t = task({ id: 1 });
-    const view = computeCountdownView(
-      snapshot({ activeTaskId: 1, isRunning: true, mode: "countdown", sessionLengthMinutes: 10, elapsedSeconds: 10_000 }),
+    const view = computeFocusSessionView(
+      snapshot({ activeTaskId: 1, isRunning: true, mode: "focus", sessionLengthMinutes: 10, elapsedSeconds: 10_000 }),
       t
     );
     expect(view.secondsLeft).toBe(0);
@@ -85,14 +85,14 @@ describe("computeCountdownView", () => {
 
   it("defaults to the task's planned minutes when set", () => {
     const t = task({ id: 1, plannedMinutes: 45 });
-    const view = computeCountdownView(snapshot(), t);
+    const view = computeFocusSessionView(snapshot(), t);
     expect(view.defaultMinutes).toBe(45);
   });
 
   it("falls back to 25 minutes when plannedMinutes is unset or zero", () => {
-    expect(computeCountdownView(snapshot(), task({ id: 1, plannedMinutes: null })).defaultMinutes).toBe(25);
-    expect(computeCountdownView(snapshot(), task({ id: 1, plannedMinutes: 0 })).defaultMinutes).toBe(25);
-    expect(computeCountdownView(snapshot(), null).defaultMinutes).toBe(25);
+    expect(computeFocusSessionView(snapshot(), task({ id: 1, plannedMinutes: null })).defaultMinutes).toBe(25);
+    expect(computeFocusSessionView(snapshot(), task({ id: 1, plannedMinutes: 0 })).defaultMinutes).toBe(25);
+    expect(computeFocusSessionView(snapshot(), null).defaultMinutes).toBe(25);
   });
 });
 
@@ -109,9 +109,9 @@ describe("computeLiveActualView", () => {
     expect(view.isRunningHere).toBe(false);
   });
 
-  it("is inactive during a countdown session for this task (mode gate)", () => {
+  it("is inactive during a Focus session for this task (mode gate)", () => {
     const t = task({ id: 1, actualMinutes: 10 });
-    const view = computeLiveActualView(snapshot({ activeTaskId: 1, isRunning: true, mode: "countdown" }), t);
+    const view = computeLiveActualView(snapshot({ activeTaskId: 1, isRunning: true, mode: "focus" }), t);
     expect(view.isRunningHere).toBe(false);
     expect(view.actualSeconds).toBeNull();
   });

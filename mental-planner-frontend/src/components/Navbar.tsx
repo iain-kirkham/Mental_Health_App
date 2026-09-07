@@ -16,28 +16,28 @@ import { Timer, LineChart, User, Home as HomeIcon, CalendarDays, Menu, X } from 
 import React, { useState } from 'react'
 import PageInset from '@/components/PageInset'
 import { useTimerStore } from '@/store/timerStore'
-import { formatTime } from '@/lib/pomodoro-format'
+import { formatTime } from '@/lib/focus-format'
 import { useQueryClient } from '@tanstack/react-query'
 
 /**
  * Live countdown shown beside its nav link. It is the only part of the navbar
  * subscribed to the timer, so a tick re-renders this span rather than the whole
- * header (Radix menu, Clerk user area and all). Scoped to countdown mode only -
- * a plain task stopwatch running elsewhere shouldn't surface a Pomodoro badge here.
+ * header (Radix menu, Clerk user area and all). Scoped to focus mode only -
+ * a plain task stopwatch running elsewhere shouldn't surface a Focus badge here.
  */
-function PomodoroCountdown() {
+function FocusCountdown() {
     const mode = useTimerStore((state) => state.mode)
     const isRunning = useTimerStore((state) => state.isRunning)
     const elapsedSeconds = useTimerStore((state) => state.elapsedSeconds)
     const sessionLengthMinutes = useTimerStore((state) => state.sessionLengthMinutes)
 
-    if (mode !== 'countdown' || !isRunning || sessionLengthMinutes === null) return null
+    if (mode !== 'focus' || !isRunning || sessionLengthMinutes === null) return null
     const timeLeft = Math.max(0, sessionLengthMinutes * 60 - elapsedSeconds)
 
     return (
         <span
             className="ml-2 rounded-full bg-chart-2/15 text-chart-2 text-xs font-mono font-semibold px-2 py-0.5 tabular-nums"
-            aria-label={`Pomodoro session running, ${formatTime(timeLeft)} remaining`}
+            aria-label={`Focus session running, ${formatTime(timeLeft)} remaining`}
         >
             {formatTime(timeLeft)}
         </span>
@@ -60,10 +60,10 @@ const routes: { href: string; label: string; icon: React.ReactNode; badge?: Reac
         icon: <CalendarDays className="mr-2 h-4 w-4" />
     },
     {
-        href: '/pomodoro',
-        label: 'Pomodoro',
+        href: '/focus',
+        label: 'Focus',
         icon: <Timer className="mr-2 h-4 w-4" />,
-        badge: <PomodoroCountdown />
+        badge: <FocusCountdown />
     },
     {
         href: '/mood-tracker',

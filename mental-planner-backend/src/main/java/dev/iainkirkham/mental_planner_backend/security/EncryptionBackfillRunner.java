@@ -55,11 +55,11 @@ public class EncryptionBackfillRunner implements ApplicationRunner {
         int taskRows = backfillTask();
         int subtaskRows = backfillSubtask();
         int moodEntryRows = backfillMoodEntry();
-        int pomodoroRows = backfillPomodoroSession();
+        int taskTimeEntryRows = backfillTaskTimeEntry();
 
-        log.warn("Encryption backfill complete: task={}, subtask={}, mood_entry={}, pomodoro_session={}. " +
+        log.warn("Encryption backfill complete: task={}, subtask={}, mood_entry={}, task_time_entry={}. " +
                         "Remove app.encryption.backfill.enabled before the next deploy.",
-                taskRows, subtaskRows, moodEntryRows, pomodoroRows);
+                taskRows, subtaskRows, moodEntryRows, taskTimeEntryRows);
     }
 
     private int backfillTask() {
@@ -120,17 +120,17 @@ public class EncryptionBackfillRunner implements ApplicationRunner {
         return rows.size();
     }
 
-    private int backfillPomodoroSession() {
+    private int backfillTaskTimeEntry() {
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(
-                "SELECT id, user_id, notes FROM pomodoro_session " +
+                "SELECT id, user_id, notes FROM task_time_entry " +
                         "WHERE notes IS NOT NULL AND notes NOT LIKE 'v1:%'");
 
         for (Map<String, Object> row : rows) {
-            SecretKey key = keyForRow(row, "pomodoro_session");
+            SecretKey key = keyForRow(row, "task_time_entry");
             if (key == null) {
                 continue;
             }
-            jdbcTemplate.update("UPDATE pomodoro_session SET notes = ? WHERE id = ?",
+            jdbcTemplate.update("UPDATE task_time_entry SET notes = ? WHERE id = ?",
                     encryptIfPlain((String) row.get("notes"), key),
                     row.get("id"));
         }

@@ -18,6 +18,14 @@ import javax.crypto.SecretKey;
  * fail loudly with an {@link EncryptionException} rather than silently return garbage,
  * since AES-GCM's auth tag check fails under the wrong key.
  * <p>
+ * <b>Legacy plaintext tolerance:</b> {@link #convertToEntityAttribute} passes through any value
+ * that isn't {@code v1:}-prefixed ciphertext, instead of failing, since the encryption backfill
+ * (see {@code EncryptionBackfillRunner}) has not been run against every environment yet and some
+ * rows on converted columns still hold plaintext. This doesn't weaken the cross-user guarantee
+ * above - another user's row is still properly prefixed and still fails the auth-tag check - the
+ * only new path is a value that was never encrypted in the first place. Writes always encrypt
+ * unconditionally. TODO: remove this tolerance once the backfill has provably run everywhere.
+ * <p>
  * <b>Init-order invariant:</b> Hibernate instantiates this converter bean <i>while building</i>
  * the {@code EntityManagerFactory}. {@link UserDataKeyService} must stay {@code @Lazy} here,
  * since it depends (transitively) on a JPA repository that itself needs the
@@ -57,6 +65,9 @@ public class EncryptedStringConverter implements AttributeConverter<String, Stri
     public String convertToEntityAttribute(String dbData) {
         if (dbData == null) {
             return null;
+        }
+        if (!encryptionService.isEncrypted(dbData)) {
+            return dbData;
         }
         return encryptionService.decrypt(dbData, currentUserDataKey());
     }

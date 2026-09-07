@@ -5,7 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
  * Main application class for ADHD Focus Companion Backend
- * Provides REST APIs for Pomodoro session tracking and mood logging
+ * Provides REST APIs for task planning, focus-session time tracking, and mood logging
  */
 @SpringBootApplication
 public class AdhdFocusCompanionApplication {

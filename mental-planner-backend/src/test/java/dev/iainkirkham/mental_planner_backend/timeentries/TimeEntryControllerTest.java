@@ -3,6 +3,7 @@ package dev.iainkirkham.mental_planner_backend.timeentries;
 import dev.iainkirkham.mental_planner_backend.exception.ResourceNotFoundException;
 import dev.iainkirkham.mental_planner_backend.timeentries.dto.TaskTimeEntryRequestDTO;
 import dev.iainkirkham.mental_planner_backend.timeentries.dto.TaskTimeEntryResponseDTO;
+import dev.iainkirkham.mental_planner_backend.timeentries.dto.TimeEntryReflectionRequestDTO;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -42,20 +43,22 @@ class TimeEntryControllerTest {
         entry.setMinutes(30);
         entry.setEntryDate(FIXED_DATE);
         entry.setSource(TimeEntrySource.STOPWATCH);
-        when(timeEntryService.getTimeEntries(1L)).thenReturn(List.of(entry));
+        when(timeEntryService.getTimeEntries(FIXED_DATE, FIXED_DATE)).thenReturn(List.of(entry));
 
-        ResponseEntity<List<TaskTimeEntryResponseDTO>> response = timeEntryController.getTimeEntries(1L);
+        ResponseEntity<List<TaskTimeEntryResponseDTO>> response =
+                timeEntryController.getTimeEntries(FIXED_DATE, FIXED_DATE);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).hasSize(1);
-        verify(timeEntryService).getTimeEntries(1L);
+        verify(timeEntryService).getTimeEntries(FIXED_DATE, FIXED_DATE);
     }
 
     @Test
     void getTimeEntries_ShouldReturnNoContentWhenEmpty() {
-        when(timeEntryService.getTimeEntries(1L)).thenReturn(List.of());
+        when(timeEntryService.getTimeEntries(FIXED_DATE, FIXED_DATE)).thenReturn(List.of());
 
-        ResponseEntity<List<TaskTimeEntryResponseDTO>> response = timeEntryController.getTimeEntries(1L);
+        ResponseEntity<List<TaskTimeEntryResponseDTO>> response =
+                timeEntryController.getTimeEntries(FIXED_DATE, FIXED_DATE);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
     }
@@ -63,6 +66,7 @@ class TimeEntryControllerTest {
     @Test
     void logTimeEntry_ShouldReturnCreatedEntry() {
         TaskTimeEntryRequestDTO requestDTO = new TaskTimeEntryRequestDTO();
+        requestDTO.setTaskId(1L);
         requestDTO.setMinutes(20);
         requestDTO.setEntryDate(FIXED_DATE);
         requestDTO.setSource(TimeEntrySource.MANUAL);
@@ -73,45 +77,76 @@ class TimeEntryControllerTest {
         created.setMinutes(20);
         created.setEntryDate(FIXED_DATE);
         created.setSource(TimeEntrySource.MANUAL);
-        when(timeEntryService.logTimeEntry(1L, requestDTO)).thenReturn(created);
+        when(timeEntryService.logTimeEntry(requestDTO)).thenReturn(created);
 
-        ResponseEntity<TaskTimeEntryResponseDTO> response = timeEntryController.logTimeEntry(1L, requestDTO);
+        ResponseEntity<TaskTimeEntryResponseDTO> response = timeEntryController.logTimeEntry(requestDTO);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody())
                 .isNotNull()
                 .usingRecursiveComparison()
                 .isEqualTo(created);
-        verify(timeEntryService).logTimeEntry(1L, requestDTO);
+        verify(timeEntryService).logTimeEntry(requestDTO);
     }
 
     @Test
     void logTimeEntry_ShouldReturnNotFoundWhenTaskNotOwned() {
         TaskTimeEntryRequestDTO requestDTO = new TaskTimeEntryRequestDTO();
+        requestDTO.setTaskId(99L);
         requestDTO.setMinutes(20);
         requestDTO.setEntryDate(FIXED_DATE);
         requestDTO.setSource(TimeEntrySource.MANUAL);
-        when(timeEntryService.logTimeEntry(anyLong(), any(TaskTimeEntryRequestDTO.class)))
+        when(timeEntryService.logTimeEntry(any(TaskTimeEntryRequestDTO.class)))
                 .thenThrow(new ResourceNotFoundException("Task not found with ID: 99"));
 
-        assertThrows(ResourceNotFoundException.class, () -> timeEntryController.logTimeEntry(99L, requestDTO));
+        assertThrows(ResourceNotFoundException.class, () -> timeEntryController.logTimeEntry(requestDTO));
+    }
+
+    @Test
+    void updateTimeEntryReflection_ShouldReturnUpdatedEntry() {
+        TimeEntryReflectionRequestDTO requestDTO = new TimeEntryReflectionRequestDTO();
+        requestDTO.setScore((short) 4);
+        requestDTO.setNotes("Went well");
+
+        TaskTimeEntryResponseDTO updated = new TaskTimeEntryResponseDTO();
+        updated.setId(1L);
+        updated.setScore((short) 4);
+        updated.setNotes("Went well");
+        when(timeEntryService.updateTimeEntryReflection(1L, requestDTO)).thenReturn(updated);
+
+        ResponseEntity<TaskTimeEntryResponseDTO> response =
+                timeEntryController.updateTimeEntryReflection(1L, requestDTO);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo(updated);
+        verify(timeEntryService).updateTimeEntryReflection(1L, requestDTO);
+    }
+
+    @Test
+    void updateTimeEntryReflection_ShouldThrowWhenNotFound() {
+        TimeEntryReflectionRequestDTO requestDTO = new TimeEntryReflectionRequestDTO();
+        when(timeEntryService.updateTimeEntryReflection(anyLong(), any(TimeEntryReflectionRequestDTO.class)))
+                .thenThrow(new ResourceNotFoundException("Time entry not found"));
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> timeEntryController.updateTimeEntryReflection(99L, requestDTO));
     }
 
     @Test
     void deleteTimeEntry_ShouldReturnNoContentWhenFound() {
-        doNothing().when(timeEntryService).deleteTimeEntry(1L, 10L);
+        doNothing().when(timeEntryService).deleteTimeEntry(10L);
 
-        ResponseEntity<Void> response = timeEntryController.deleteTimeEntry(1L, 10L);
+        ResponseEntity<Void> response = timeEntryController.deleteTimeEntry(10L);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
-        verify(timeEntryService).deleteTimeEntry(1L, 10L);
+        verify(timeEntryService).deleteTimeEntry(10L);
     }
 
     @Test
     void deleteTimeEntry_ShouldReturnNotFoundWhenNotFound() {
         doThrow(new ResourceNotFoundException("Time entry not found"))
-                .when(timeEntryService).deleteTimeEntry(1L, 99L);
+                .when(timeEntryService).deleteTimeEntry(99L);
 
-        assertThrows(ResourceNotFoundException.class, () -> timeEntryController.deleteTimeEntry(1L, 99L));
+        assertThrows(ResourceNotFoundException.class, () -> timeEntryController.deleteTimeEntry(99L));
     }
 }
