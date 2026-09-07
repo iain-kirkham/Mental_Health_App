@@ -30,13 +30,14 @@ class TaskTimeEntryMapperTest {
     @Test
     void toEntity_ShouldConvertStopwatchRequestDTOToEntity() {
         TaskTimeEntryRequestDTO requestDTO = new TaskTimeEntryRequestDTO();
+        requestDTO.setTaskId(1L);
         requestDTO.setStartedAt(FIXED_NOW);
         requestDTO.setEndedAt(FIXED_NOW.plusSeconds(1800));
         requestDTO.setMinutes(30);
         requestDTO.setEntryDate(FIXED_DATE);
         requestDTO.setSource(TimeEntrySource.STOPWATCH);
 
-        TaskTimeEntry entity = mapper.toEntity(requestDTO, 1L);
+        TaskTimeEntry entity = mapper.toEntity(requestDTO);
 
         assertThat(entity).isNotNull();
         assertThat(entity.getId()).isNull();
@@ -50,15 +51,19 @@ class TaskTimeEntryMapperTest {
     }
 
     @Test
-    void toEntity_ShouldConvertCountdownRequestDTOToEntity() {
+    void toEntity_ShouldConvertFocusRequestDTOToEntity() {
         TaskTimeEntryRequestDTO requestDTO = new TaskTimeEntryRequestDTO();
+        requestDTO.setTaskId(1L);
         requestDTO.setStartedAt(FIXED_NOW);
         requestDTO.setEndedAt(FIXED_NOW.plusSeconds(1500));
         requestDTO.setMinutes(25);
         requestDTO.setEntryDate(FIXED_DATE);
-        requestDTO.setSource(TimeEntrySource.COUNTDOWN);
+        requestDTO.setSource(TimeEntrySource.FOCUS);
+        requestDTO.setScore((short) 4);
+        requestDTO.setEnergyRating(EnergyRating.ENERGIZING);
+        requestDTO.setNotes("Good session");
 
-        TaskTimeEntry entity = mapper.toEntity(requestDTO, 1L);
+        TaskTimeEntry entity = mapper.toEntity(requestDTO);
 
         assertThat(entity).isNotNull();
         assertThat(entity.getTaskId()).isEqualTo(1L);
@@ -66,25 +71,44 @@ class TaskTimeEntryMapperTest {
         assertThat(entity.getEndedAt()).isEqualTo(FIXED_NOW.plusSeconds(1500));
         assertThat(entity.getMinutes()).isEqualTo(25);
         assertThat(entity.getEntryDate()).isEqualTo(FIXED_DATE);
-        assertThat(entity.getSource()).isEqualTo(TimeEntrySource.COUNTDOWN);
+        assertThat(entity.getSource()).isEqualTo(TimeEntrySource.FOCUS);
+        assertThat(entity.getScore()).isEqualTo((short) 4);
+        assertThat(entity.getEnergyRating()).isEqualTo(EnergyRating.ENERGIZING);
+        assertThat(entity.getNotes()).isEqualTo("Good session");
+    }
+
+    @Test
+    void toEntity_ShouldConvertTaskLessFocusRequestDTOToEntity() {
+        TaskTimeEntryRequestDTO requestDTO = new TaskTimeEntryRequestDTO();
+        requestDTO.setStartedAt(FIXED_NOW);
+        requestDTO.setEndedAt(FIXED_NOW.plusSeconds(1500));
+        requestDTO.setMinutes(25);
+        requestDTO.setEntryDate(FIXED_DATE);
+        requestDTO.setSource(TimeEntrySource.FOCUS);
+
+        TaskTimeEntry entity = mapper.toEntity(requestDTO);
+
+        assertThat(entity.getTaskId()).isNull();
+        assertThat(entity.getSource()).isEqualTo(TimeEntrySource.FOCUS);
     }
 
     @Test
     void toEntity_ShouldConvertManualRequestDTOWithNoTimestamps() {
         TaskTimeEntryRequestDTO requestDTO = new TaskTimeEntryRequestDTO();
+        requestDTO.setTaskId(2L);
         requestDTO.setMinutes(45);
         requestDTO.setEntryDate(FIXED_DATE);
         requestDTO.setSource(TimeEntrySource.MANUAL);
-        requestDTO.setNote("Logged after the fact");
+        requestDTO.setNotes("Logged after the fact");
 
-        TaskTimeEntry entity = mapper.toEntity(requestDTO, 2L);
+        TaskTimeEntry entity = mapper.toEntity(requestDTO);
 
         assertThat(entity.getTaskId()).isEqualTo(2L);
         assertThat(entity.getStartedAt()).isNull();
         assertThat(entity.getEndedAt()).isNull();
         assertThat(entity.getMinutes()).isEqualTo(45);
         assertThat(entity.getSource()).isEqualTo(TimeEntrySource.MANUAL);
-        assertThat(entity.getNote()).isEqualTo("Logged after the fact");
+        assertThat(entity.getNotes()).isEqualTo("Logged after the fact");
     }
 
     @Test
@@ -98,7 +122,7 @@ class TaskTimeEntryMapperTest {
         entity.setMinutes(10);
         entity.setEntryDate(FIXED_DATE);
         entity.setSource(TimeEntrySource.STOPWATCH);
-        entity.setNote("Focused burst");
+        entity.setNotes("Focused burst");
 
         TaskTimeEntryResponseDTO responseDTO = mapper.toResponseDTO(entity);
 
@@ -110,7 +134,7 @@ class TaskTimeEntryMapperTest {
         assertThat(responseDTO.getMinutes()).isEqualTo(10);
         assertThat(responseDTO.getEntryDate()).isEqualTo(FIXED_DATE);
         assertThat(responseDTO.getSource()).isEqualTo(TimeEntrySource.STOPWATCH);
-        assertThat(responseDTO.getNote()).isEqualTo("Focused burst");
+        assertThat(responseDTO.getNotes()).isEqualTo("Focused burst");
         // userId should NOT be in response DTO
     }
 
@@ -139,7 +163,7 @@ class TaskTimeEntryMapperTest {
 
     @Test
     void toEntity_WithNullDTO_ShouldReturnNull() {
-        assertThat(mapper.toEntity(null, 1L)).isNull();
+        assertThat(mapper.toEntity(null)).isNull();
     }
 
     @Test

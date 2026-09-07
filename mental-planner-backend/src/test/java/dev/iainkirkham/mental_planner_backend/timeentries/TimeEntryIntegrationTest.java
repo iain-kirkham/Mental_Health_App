@@ -7,6 +7,7 @@ import dev.iainkirkham.mental_planner_backend.tasks.Task;
 import dev.iainkirkham.mental_planner_backend.tasks.TaskRepository;
 import dev.iainkirkham.mental_planner_backend.timeentries.dto.TaskTimeEntryRequestDTO;
 import dev.iainkirkham.mental_planner_backend.timeentries.dto.TaskTimeEntryResponseDTO;
+import dev.iainkirkham.mental_planner_backend.timeentries.dto.TimeEntryReflectionRequestDTO;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,7 +27,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Integration tests for the time-entry API: stopwatch/countdown entries are history-only,
+ * Integration tests for the time-entry API: stopwatch/focus entries are history-only,
  * manual entries drive actualMinutes.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -69,6 +70,7 @@ class TimeEntryIntegrationTest {
         taskRepository.save(task);
 
         TaskTimeEntryRequestDTO requestDTO = new TaskTimeEntryRequestDTO();
+        requestDTO.setTaskId(task.getId());
         requestDTO.setStartedAt(java.time.Instant.parse("2025-12-01T09:00:00Z"));
         requestDTO.setEndedAt(java.time.Instant.parse("2025-12-01T09:30:00Z"));
         requestDTO.setMinutes(30);
@@ -76,7 +78,7 @@ class TimeEntryIntegrationTest {
         requestDTO.setSource(TimeEntrySource.STOPWATCH);
 
         ResponseEntity<TaskTimeEntryResponseDTO> response = restTemplate.postForEntity(
-                "/api/tasks/" + task.getId() + "/time-entries",
+                "/api/time-entries",
                 requestDTO,
                 TaskTimeEntryResponseDTO.class
         );
@@ -90,30 +92,67 @@ class TimeEntryIntegrationTest {
     }
 
     @Test
-    void logTimeEntry_CountdownEntry_ShouldNotChangeActualMinutes() {
+    void logTimeEntry_FocusEntry_ShouldNotChangeActualMinutes() {
         Task task = createTaskInDb("Deep work", TestAuthenticationConfig.TEST_USER_ID);
         task.recordTimerCheckpoint(25);
         taskRepository.save(task);
 
         TaskTimeEntryRequestDTO requestDTO = new TaskTimeEntryRequestDTO();
+        requestDTO.setTaskId(task.getId());
         requestDTO.setStartedAt(java.time.Instant.parse("2025-12-01T09:00:00Z"));
         requestDTO.setEndedAt(java.time.Instant.parse("2025-12-01T09:25:00Z"));
         requestDTO.setMinutes(25);
         requestDTO.setEntryDate(FIXED_DATE);
-        requestDTO.setSource(TimeEntrySource.COUNTDOWN);
+        requestDTO.setSource(TimeEntrySource.FOCUS);
 
         ResponseEntity<TaskTimeEntryResponseDTO> response = restTemplate.postForEntity(
-                "/api/tasks/" + task.getId() + "/time-entries",
+                "/api/time-entries",
                 requestDTO,
                 TaskTimeEntryResponseDTO.class
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getSource()).isEqualTo(TimeEntrySource.COUNTDOWN);
+        assertThat(response.getBody().getSource()).isEqualTo(TimeEntrySource.FOCUS);
         // Like STOPWATCH, a completed focus session already has actualMinutes kept correct by
         // its own persist path - logging the entry must not double-count it.
         assertThat(taskRepository.findById(task.getId()).orElseThrow().getActualMinutes()).isEqualTo(25);
+    }
+
+    @Test
+    void logTimeEntry_TaskLessFocusEntry_ShouldBeAccepted() {
+        TaskTimeEntryRequestDTO requestDTO = new TaskTimeEntryRequestDTO();
+        requestDTO.setStartedAt(java.time.Instant.parse("2025-12-01T09:00:00Z"));
+        requestDTO.setEndedAt(java.time.Instant.parse("2025-12-01T09:25:00Z"));
+        requestDTO.setMinutes(25);
+        requestDTO.setEntryDate(FIXED_DATE);
+        requestDTO.setSource(TimeEntrySource.FOCUS);
+
+        ResponseEntity<TaskTimeEntryResponseDTO> response = restTemplate.postForEntity(
+                "/api/time-entries",
+                requestDTO,
+                TaskTimeEntryResponseDTO.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getTaskId()).isNull();
+    }
+
+    @Test
+    void logTimeEntry_ManualEntryWithNoTaskId_ShouldBeRejected() {
+        TaskTimeEntryRequestDTO requestDTO = new TaskTimeEntryRequestDTO();
+        requestDTO.setMinutes(15);
+        requestDTO.setEntryDate(FIXED_DATE);
+        requestDTO.setSource(TimeEntrySource.MANUAL);
+
+        ResponseEntity<Void> response = restTemplate.postForEntity(
+                "/api/time-entries",
+                requestDTO,
+                Void.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
@@ -123,19 +162,49 @@ class TimeEntryIntegrationTest {
         taskRepository.save(task);
 
         TaskTimeEntryRequestDTO requestDTO = new TaskTimeEntryRequestDTO();
+        requestDTO.setTaskId(task.getId());
         requestDTO.setMinutes(15);
         requestDTO.setEntryDate(FIXED_DATE);
         requestDTO.setSource(TimeEntrySource.MANUAL);
-        requestDTO.setNote("Forgot to start the timer");
+        requestDTO.setNotes("Forgot to start the timer");
 
         ResponseEntity<TaskTimeEntryResponseDTO> response = restTemplate.postForEntity(
-                "/api/tasks/" + task.getId() + "/time-entries",
+                "/api/time-entries",
                 requestDTO,
                 TaskTimeEntryResponseDTO.class
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(taskRepository.findById(task.getId()).orElseThrow().getActualMinutes()).isEqualTo(25);
+    }
+
+    @Test
+    void updateTimeEntryReflection_ShouldAttachScoreEnergyAndNotes() {
+        TaskTimeEntry entry = new TaskTimeEntry();
+        entry.setUserId(TestAuthenticationConfig.TEST_USER_ID);
+        entry.setMinutes(25);
+        entry.setEntryDate(FIXED_DATE);
+        entry.setSource(TimeEntrySource.FOCUS);
+        entry = taskTimeEntryRepository.save(entry);
+
+        TimeEntryReflectionRequestDTO requestDTO = new TimeEntryReflectionRequestDTO();
+        requestDTO.setScore((short) 4);
+        requestDTO.setEnergyRating(EnergyRating.ENERGIZING);
+        requestDTO.setNotes("Focused well");
+
+        ResponseEntity<TaskTimeEntryResponseDTO> response = restTemplate.exchange(
+                "/api/time-entries/" + entry.getId(),
+                HttpMethod.PATCH,
+                new org.springframework.http.HttpEntity<>(requestDTO),
+                TaskTimeEntryResponseDTO.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getScore()).isEqualTo((short) 4);
+        assertThat(response.getBody().getEnergyRating()).isEqualTo(EnergyRating.ENERGIZING);
+        assertThat(response.getBody().getNotes()).isEqualTo("Focused well");
+        assertThat(response.getBody().getMinutes()).isEqualTo(25);
     }
 
     @Test
@@ -153,7 +222,7 @@ class TimeEntryIntegrationTest {
         entry = taskTimeEntryRepository.save(entry);
 
         ResponseEntity<Void> response = restTemplate.exchange(
-                "/api/tasks/" + task.getId() + "/time-entries/" + entry.getId(),
+                "/api/time-entries/" + entry.getId(),
                 HttpMethod.DELETE,
                 null,
                 Void.class
@@ -179,7 +248,7 @@ class TimeEntryIntegrationTest {
         entry = taskTimeEntryRepository.save(entry);
 
         ResponseEntity<Void> response = restTemplate.exchange(
-                "/api/tasks/" + task.getId() + "/time-entries/" + entry.getId(),
+                "/api/time-entries/" + entry.getId(),
                 HttpMethod.DELETE,
                 null,
                 Void.class
@@ -190,7 +259,7 @@ class TimeEntryIntegrationTest {
     }
 
     @Test
-    void deleteTimeEntry_CountdownEntry_ShouldLeaveActualMinutesUnchanged() {
+    void deleteTimeEntry_FocusEntry_ShouldLeaveActualMinutesUnchanged() {
         Task task = createTaskInDb("Deep work", TestAuthenticationConfig.TEST_USER_ID);
         task.recordTimerCheckpoint(25);
         taskRepository.save(task);
@@ -200,11 +269,11 @@ class TimeEntryIntegrationTest {
         entry.setUserId(TestAuthenticationConfig.TEST_USER_ID);
         entry.setMinutes(25);
         entry.setEntryDate(FIXED_DATE);
-        entry.setSource(TimeEntrySource.COUNTDOWN);
+        entry.setSource(TimeEntrySource.FOCUS);
         entry = taskTimeEntryRepository.save(entry);
 
         ResponseEntity<Void> response = restTemplate.exchange(
-                "/api/tasks/" + task.getId() + "/time-entries/" + entry.getId(),
+                "/api/time-entries/" + entry.getId(),
                 HttpMethod.DELETE,
                 null,
                 Void.class
@@ -215,7 +284,46 @@ class TimeEntryIntegrationTest {
     }
 
     @Test
-    void getTimeEntries_ShouldReturnEntriesMostRecentDayFirst() {
+    void deleteTimeEntry_TaskLessEntry_ShouldSucceed() {
+        TaskTimeEntry entry = new TaskTimeEntry();
+        entry.setUserId(TestAuthenticationConfig.TEST_USER_ID);
+        entry.setMinutes(25);
+        entry.setEntryDate(FIXED_DATE);
+        entry.setSource(TimeEntrySource.FOCUS);
+        entry = taskTimeEntryRepository.save(entry);
+
+        ResponseEntity<Void> response = restTemplate.exchange(
+                "/api/time-entries/" + entry.getId(),
+                HttpMethod.DELETE,
+                null,
+                Void.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(taskTimeEntryRepository.findById(entry.getId())).isEmpty();
+    }
+
+    @Test
+    void deletingATask_ShouldOrphanItsTimeEntriesRatherThanDeletingThem() {
+        Task task = createTaskInDb("Deep work", TestAuthenticationConfig.TEST_USER_ID);
+
+        TaskTimeEntry entry = new TaskTimeEntry();
+        entry.setTaskId(task.getId());
+        entry.setUserId(TestAuthenticationConfig.TEST_USER_ID);
+        entry.setMinutes(25);
+        entry.setEntryDate(FIXED_DATE);
+        entry.setSource(TimeEntrySource.FOCUS);
+        entry = taskTimeEntryRepository.save(entry);
+
+        taskRepository.delete(task);
+        taskRepository.flush();
+
+        TaskTimeEntry reloaded = taskTimeEntryRepository.findById(entry.getId()).orElseThrow();
+        assertThat(reloaded.getTaskId()).isNull();
+    }
+
+    @Test
+    void getTimeEntriesForTask_ShouldReturnEntriesMostRecentDayFirst() {
         Task task = createTaskInDb("Deep work", TestAuthenticationConfig.TEST_USER_ID);
 
         TaskTimeEntry older = new TaskTimeEntry();
@@ -249,16 +357,57 @@ class TimeEntryIntegrationTest {
     }
 
     @Test
+    void getTimeEntries_ShouldReturnEntriesAcrossTasksWithinDateRange() {
+        Task task = createTaskInDb("Deep work", TestAuthenticationConfig.TEST_USER_ID);
+
+        TaskTimeEntry linked = new TaskTimeEntry();
+        linked.setTaskId(task.getId());
+        linked.setUserId(TestAuthenticationConfig.TEST_USER_ID);
+        linked.setMinutes(10);
+        linked.setEntryDate(FIXED_DATE);
+        linked.setSource(TimeEntrySource.MANUAL);
+        taskTimeEntryRepository.save(linked);
+
+        TaskTimeEntry taskLess = new TaskTimeEntry();
+        taskLess.setUserId(TestAuthenticationConfig.TEST_USER_ID);
+        taskLess.setMinutes(25);
+        taskLess.setEntryDate(FIXED_DATE);
+        taskLess.setSource(TimeEntrySource.FOCUS);
+        taskTimeEntryRepository.save(taskLess);
+
+        TaskTimeEntry outOfRange = new TaskTimeEntry();
+        outOfRange.setUserId(TestAuthenticationConfig.TEST_USER_ID);
+        outOfRange.setMinutes(5);
+        outOfRange.setEntryDate(FIXED_DATE.minusDays(30));
+        outOfRange.setSource(TimeEntrySource.FOCUS);
+        taskTimeEntryRepository.save(outOfRange);
+
+        ResponseEntity<List<TaskTimeEntryResponseDTO>> response = restTemplate.exchange(
+                "/api/time-entries?from=" + FIXED_DATE + "&to=" + FIXED_DATE,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<>() {}
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody())
+                .isNotNull()
+                .extracting(TaskTimeEntryResponseDTO::getMinutes)
+                .containsExactlyInAnyOrder(10, 25);
+    }
+
+    @Test
     void timeEntries_ShouldReturnNotFoundForAnotherUsersTask() {
         Task othersTask = createTaskInDb("Not mine", OTHER_USER_ID);
 
         TaskTimeEntryRequestDTO requestDTO = new TaskTimeEntryRequestDTO();
+        requestDTO.setTaskId(othersTask.getId());
         requestDTO.setMinutes(10);
         requestDTO.setEntryDate(FIXED_DATE);
         requestDTO.setSource(TimeEntrySource.MANUAL);
 
         ResponseEntity<Void> response = restTemplate.postForEntity(
-                "/api/tasks/" + othersTask.getId() + "/time-entries",
+                "/api/time-entries",
                 requestDTO,
                 Void.class
         );

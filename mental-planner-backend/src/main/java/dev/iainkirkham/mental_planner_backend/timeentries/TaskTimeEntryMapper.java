@@ -9,19 +9,21 @@ import java.util.List;
 @Component
 public class TaskTimeEntryMapper {
 
-    public TaskTimeEntry toEntity(TaskTimeEntryRequestDTO dto, Long taskId) {
+    public TaskTimeEntry toEntity(TaskTimeEntryRequestDTO dto) {
         if (dto == null) {
             return null;
         }
 
         TaskTimeEntry entity = new TaskTimeEntry();
-        entity.setTaskId(taskId);
+        entity.setTaskId(dto.getTaskId());
         entity.setStartedAt(dto.getStartedAt());
         entity.setEndedAt(dto.getEndedAt());
         entity.setMinutes(dto.getMinutes());
         entity.setEntryDate(dto.getEntryDate());
         entity.setSource(dto.getSource());
-        entity.setNote(dto.getNote());
+        entity.setNotes(dto.getNotes());
+        entity.setScore(dto.getScore());
+        entity.setEnergyRating(dto.getEnergyRating());
 
         return entity;
     }
@@ -39,7 +41,9 @@ public class TaskTimeEntryMapper {
         dto.setMinutes(entity.getMinutes());
         dto.setEntryDate(entity.getEntryDate());
         dto.setSource(entity.getSource());
-        dto.setNote(entity.getNote());
+        dto.setNotes(entity.getNotes());
+        dto.setScore(entity.getScore());
+        dto.setEnergyRating(entity.getEnergyRating());
 
         return dto;
     }

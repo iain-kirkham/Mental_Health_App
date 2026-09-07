@@ -116,7 +116,7 @@ public class Task {
 
     /**
      * Adds a manually-logged time entry's minutes onto the tracked total. Manual entries have
-     * no other path to update the total, unlike stopwatch/countdown runs which are reflected
+     * no other path to update the total, unlike stopwatch/focus runs which are reflected
      * via {@link #recordTimerCheckpoint} instead.
      *
      * @param minutes the manual entry's minutes; must be positive.
@@ -136,10 +136,10 @@ public class Task {
     }
 
     /**
-     * Sets the tracked total to a stopwatch or countdown run's elapsed total, sent as a
+     * Sets the tracked total to a stopwatch or focus run's elapsed total, sent as a
      * checkpoint by the client during (or at the end of) that run. Recorded as history
      * separately, via a {@link TaskTimeEntry} with source {@code STOPWATCH} or
-     * {@code COUNTDOWN}; those entries never touch this total directly.
+     * {@code FOCUS}; those entries never touch this total directly.
      *
      * @param totalMinutes the run's elapsed total in minutes; must not be negative.
      */

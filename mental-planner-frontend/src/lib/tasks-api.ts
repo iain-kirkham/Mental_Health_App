@@ -7,6 +7,7 @@ import type {
   TaskResponseDTO,
   TaskTimeEntryRequestDTO,
   TaskTimeEntryResponseDTO,
+  TimeEntryReflectionRequestDTO,
 } from "@/types";
 
 export async function getTasksForDate(
@@ -245,13 +246,34 @@ export async function getTaskTimeEntries(
   return (await response.json()) as TaskTimeEntryResponseDTO[];
 }
 
-export async function logTaskTimeEntry(
-  taskId: number,
+export async function getTimeEntriesInRange(
+  from: string,
+  to: string,
+  getToken: () => Promise<string | null>
+): Promise<TaskTimeEntryResponseDTO[]> {
+  const response = await authenticatedFetch(
+    `${API_ENDPOINTS.timeEntries}?from=${from}&to=${to}`,
+    { method: 'GET' },
+    getToken
+  );
+
+  if (response.status === 204) {
+    return [];
+  }
+
+  if (!response.ok) {
+    throw new Error(`Failed to load time entries (${response.status})`);
+  }
+
+  return (await response.json()) as TaskTimeEntryResponseDTO[];
+}
+
+export async function logTimeEntry(
   entry: TaskTimeEntryRequestDTO,
   getToken: () => Promise<string | null>
 ): Promise<TaskTimeEntryResponseDTO> {
   const response = await authenticatedFetch(
-    `${API_ENDPOINTS.tasks}/${taskId}/time-entries`,
+    API_ENDPOINTS.timeEntries,
     { method: 'POST', body: JSON.stringify(entry) },
     getToken
   );
@@ -265,13 +287,32 @@ export async function logTaskTimeEntry(
   return (await response.json()) as TaskTimeEntryResponseDTO;
 }
 
-export async function deleteTaskTimeEntry(
-  taskId: number,
+export async function updateTimeEntryReflection(
+  entryId: number,
+  reflection: TimeEntryReflectionRequestDTO,
+  getToken: () => Promise<string | null>
+): Promise<TaskTimeEntryResponseDTO> {
+  const response = await authenticatedFetch(
+    `${API_ENDPOINTS.timeEntries}/${entryId}`,
+    { method: 'PATCH', body: JSON.stringify(reflection) },
+    getToken
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const message = errorData.message || `Failed to save session reflection (${response.status})`;
+    throw new Error(message);
+  }
+
+  return (await response.json()) as TaskTimeEntryResponseDTO;
+}
+
+export async function deleteTimeEntry(
   entryId: number,
   getToken: () => Promise<string | null>
 ): Promise<void> {
   const response = await authenticatedFetch(
-    `${API_ENDPOINTS.tasks}/${taskId}/time-entries/${entryId}`,
+    `${API_ENDPOINTS.timeEntries}/${entryId}`,
     { method: 'DELETE' },
     getToken
   );

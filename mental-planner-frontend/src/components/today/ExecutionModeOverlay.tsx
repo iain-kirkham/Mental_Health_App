@@ -9,7 +9,7 @@ import { useChannelColor } from '@/hooks/useChannelColor'
 import { useDebouncedCommit } from '@/hooks/useDebouncedCommit'
 import { useKeyedDraft } from '@/hooks/useKeyedDraft'
 import { useTimerStore } from '@/store/timerStore'
-import { useCountdownSession } from '@/hooks/useTaskTimer'
+import { useFocusSession } from '@/hooks/useTaskTimer'
 import type { TaskResponseDTO } from '@/types'
 
 const PRESETS_MINUTES = [10, 25, 50]
@@ -47,7 +47,7 @@ export default function ExecutionModeOverlay({
   onAddSubtask,
   onUpdateNotes,
 }: ExecutionModeOverlayProps) {
-  // Read directly rather than through useCountdownSession: this is the exact session length to
+  // Read directly rather than through useFocusSession: this is the exact session length to
   // resume with (not re-derived from secondsLeft/elapsed, which would drift under rounding).
   const sessionLengthMinutes = useTimerStore((state) => state.sessionLengthMinutes)
   const startTimer = useTimerStore((state) => state.startTimer)
@@ -85,7 +85,7 @@ export default function ExecutionModeOverlay({
   const task = currentIndex >= 0 ? openTasks[currentIndex] : null
   const channelColor = useChannelColor(task?.category)
 
-  const { isActiveHere: hasSession, running, secondsLeft, defaultMinutes } = useCountdownSession(task)
+  const { isActiveHere: hasSession, running, secondsLeft, defaultMinutes } = useFocusSession(task)
   // Keyed by task id (like notesDraft below) since this overlay stays mounted across the whole
   // queue - a bare useState would leak the previous task's manual choice onto the next one.
   const [selectedPreset, setManualPresetMinutes] = useKeyedDraft(task?.id ?? null, defaultMinutes)
@@ -100,7 +100,7 @@ export default function ExecutionModeOverlay({
       return
     }
     startTimer(task.id, task.actualMinutes, {
-      mode: 'countdown',
+      mode: 'focus',
       sessionLengthMinutes: hasSession ? sessionLengthMinutes! : selectedPreset,
     })
   }

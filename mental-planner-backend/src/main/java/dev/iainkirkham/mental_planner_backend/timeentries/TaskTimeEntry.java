@@ -1,6 +1,9 @@
 package dev.iainkirkham.mental_planner_backend.timeentries;
 
+import dev.iainkirkham.mental_planner_backend.security.EncryptedStringConverter;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -11,8 +14,10 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 /**
- * A single logged interval of time tracked against a task - either one continuous
- * stopwatch run (start to stop, spanning any internal pauses) or a manually-logged entry.
+ * A single logged interval of time tracked against a task - a continuous stopwatch run
+ * (start to stop, spanning any internal pauses), a fixed-length Focus session (optionally
+ * rated afterward with a score/energy rating/notes), or a manually-logged entry. The task
+ * link is optional: a Focus session can be run without linking it to any task.
  */
 @Entity
 @Table(name = "task_time_entry")
@@ -26,21 +31,20 @@ public class TaskTimeEntry {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotNull
-    @Column(name = "task_id", nullable = false)
+    @Column(name = "task_id")
     private Long taskId;
 
     @Column(name = "user_id")
     private String userId;
 
     /**
-     * When the stopwatch run started. Null for manual entries.
+     * When the stopwatch/focus run started. Null for manual entries.
      */
     @Column(name = "started_at")
     private Instant startedAt;
 
     /**
-     * When the stopwatch run ended. Null for manual entries.
+     * When the stopwatch/focus run ended. Null for manual entries.
      */
     @Column(name = "ended_at")
     private Instant endedAt;
@@ -62,8 +66,32 @@ public class TaskTimeEntry {
     @Column(nullable = false, length = 10)
     private TimeEntrySource source;
 
-    @Column(length = 500)
-    private String note;
+    /**
+     * Free-text notes about this entry - the manual-entry note, or a Focus session's
+     * post-run reflection. Optional for every source.
+     */
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(columnDefinition = "TEXT")
+    @ToString.Exclude
+    private String notes;
+
+    /**
+     * A Focus session's quality score, 1 (very bad) to 5 (very good). Null for other sources,
+     * and for a Focus session until its reflection is submitted.
+     */
+    @Min(1)
+    @Max(5)
+    @Column(name = "score")
+    private Short score;
+
+    /**
+     * A Focus session's optional lightweight rating of whether it left the user feeling
+     * energized or drained. Null for other sources, and for a Focus session until its
+     * reflection is submitted.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "energy_rating", length = 20)
+    private EnergyRating energyRating;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();

@@ -4,12 +4,13 @@ import dev.iainkirkham.mental_planner_backend.config.TestAuthenticationConfig;
 import dev.iainkirkham.mental_planner_backend.config.TestcontainersConfiguration;
 import dev.iainkirkham.mental_planner_backend.mood.MoodEntry;
 import dev.iainkirkham.mental_planner_backend.mood.MoodEntryRepository;
-import dev.iainkirkham.mental_planner_backend.pomodoro.PomodoroSession;
-import dev.iainkirkham.mental_planner_backend.pomodoro.PomodoroSessionRepository;
 import dev.iainkirkham.mental_planner_backend.subtasks.Subtask;
 import dev.iainkirkham.mental_planner_backend.subtasks.SubtaskRepository;
 import dev.iainkirkham.mental_planner_backend.tasks.Task;
 import dev.iainkirkham.mental_planner_backend.tasks.TaskRepository;
+import dev.iainkirkham.mental_planner_backend.timeentries.TaskTimeEntry;
+import dev.iainkirkham.mental_planner_backend.timeentries.TaskTimeEntryRepository;
+import dev.iainkirkham.mental_planner_backend.timeentries.TimeEntrySource;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -44,7 +45,7 @@ class EncryptedFieldPersistenceIntegrationTest {
     private MoodEntryRepository moodEntryRepository;
 
     @Autowired
-    private PomodoroSessionRepository pomodoroSessionRepository;
+    private TaskTimeEntryRepository taskTimeEntryRepository;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -110,19 +111,21 @@ class EncryptedFieldPersistenceIntegrationTest {
     }
 
     @Test
-    void pomodoroSession_notes_isStoredEncryptedAndRoundTrips() {
-        PomodoroSession session = new PomodoroSession();
-        session.setStartTime(Instant.parse("2026-09-04T09:00:00Z"));
-        session.setEndTime(Instant.parse("2026-09-04T09:25:00Z"));
-        session.setDuration(25);
-        session.setNotes("Struggled to focus, kept thinking about the appointment");
-        session.setUserId(TestAuthenticationConfig.TEST_USER_ID);
+    void taskTimeEntry_notes_isStoredEncryptedAndRoundTrips() {
+        TaskTimeEntry entry = new TaskTimeEntry();
+        entry.setStartedAt(Instant.parse("2026-09-04T09:00:00Z"));
+        entry.setEndedAt(Instant.parse("2026-09-04T09:25:00Z"));
+        entry.setMinutes(25);
+        entry.setEntryDate(LocalDate.of(2026, 9, 4));
+        entry.setSource(TimeEntrySource.FOCUS);
+        entry.setNotes("Struggled to focus, kept thinking about the appointment");
+        entry.setUserId(TestAuthenticationConfig.TEST_USER_ID);
 
-        PomodoroSession saved = pomodoroSessionRepository.save(session);
+        TaskTimeEntry saved = taskTimeEntryRepository.save(entry);
 
-        assertRawColumnIsCiphertext("pomodoro_session", "notes", saved.getId(), "Struggled to focus, kept thinking about the appointment");
+        assertRawColumnIsCiphertext("task_time_entry", "notes", saved.getId(), "Struggled to focus, kept thinking about the appointment");
 
-        PomodoroSession reloaded = pomodoroSessionRepository.findById(saved.getId()).orElseThrow();
+        TaskTimeEntry reloaded = taskTimeEntryRepository.findById(saved.getId()).orElseThrow();
         assertThat(reloaded.getNotes()).isEqualTo("Struggled to focus, kept thinking about the appointment");
     }
 

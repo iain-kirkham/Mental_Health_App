@@ -7,7 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Unit tests for Task's tracked-time invariant: applyManualEntry/unwindManualEntry accumulate
  * manual entries onto actualMinutes, while recordTimerCheckpoint sets it directly for
- * stopwatch/countdown runs which are recorded as history separately.
+ * stopwatch/focus runs which are recorded as history separately.
  */
 class TaskTest {
 

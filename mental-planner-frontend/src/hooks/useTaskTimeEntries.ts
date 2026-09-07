@@ -2,22 +2,31 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
 import {
-  deleteTaskTimeEntry as apiDeleteTaskTimeEntry,
+  deleteTimeEntry as apiDeleteTimeEntry,
   getTaskTimeEntries as apiGetTaskTimeEntries,
-  logTaskTimeEntry as apiLogTaskTimeEntry,
+  logTimeEntry as apiLogTimeEntry,
+  updateTimeEntryReflection as apiUpdateTimeEntryReflection,
 } from "@/lib/tasks-api";
 import { toFriendlyMessage } from "@/lib/connectivity";
-import type { TaskTimeEntryRequestDTO } from "@/types";
+import type { EnergyRating, TaskTimeEntryRequestDTO, TimeEntryReflectionRequestDTO } from "@/types";
 
 export type ManualTimeEntryInput = {
   entryDate: string;
   minutes: number;
-  note: string | null;
+  notes: string | null;
+};
+
+export type ReflectionInput = {
+  entryId: number;
+  score: number | null;
+  notes: string | null;
+  energyRating: EnergyRating | null;
 };
 
 /**
- * Fetches and mutates a single task's logged time entries (stopwatch runs + manual entries).
- * Scoped to one task at a time, so it's driven from wherever that task's detail view is open.
+ * Fetches and mutates a single task's logged time entries (stopwatch/Focus runs + manual
+ * entries). Scoped to one task at a time, so it's driven from wherever that task's detail view
+ * is open.
  */
 export default function useTaskTimeEntries(taskId: number | null) {
   const { getToken } = useAuth();
@@ -33,14 +42,17 @@ export default function useTaskTimeEntries(taskId: number | null) {
   const addManualEntry = useMutation({
     mutationFn: (entry: ManualTimeEntryInput) => {
       const requestDTO: TaskTimeEntryRequestDTO = {
+        taskId,
         startedAt: null,
         endedAt: null,
         minutes: entry.minutes,
         entryDate: entry.entryDate,
         source: "MANUAL",
-        note: entry.note,
+        notes: entry.notes,
+        score: null,
+        energyRating: null,
       };
-      return apiLogTaskTimeEntry(taskId as number, requestDTO, getToken);
+      return apiLogTimeEntry(requestDTO, getToken);
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey });
@@ -53,8 +65,25 @@ export default function useTaskTimeEntries(taskId: number | null) {
     },
   });
 
+  const updateReflection = useMutation({
+    mutationFn: (input: ReflectionInput) => {
+      const requestDTO: TimeEntryReflectionRequestDTO = {
+        score: input.score,
+        notes: input.notes,
+        energyRating: input.energyRating,
+      };
+      return apiUpdateTimeEntryReflection(input.entryId, requestDTO, getToken);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey });
+    },
+    onError: (error) => {
+      toast.error(toFriendlyMessage(error, "Unable to save session reflection."));
+    },
+  });
+
   const deleteEntry = useMutation({
-    mutationFn: (entryId: number) => apiDeleteTaskTimeEntry(taskId as number, entryId, getToken),
+    mutationFn: (entryId: number) => apiDeleteTimeEntry(entryId, getToken),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey });
       void queryClient.invalidateQueries({ queryKey: ["tasks"] });
@@ -69,6 +98,7 @@ export default function useTaskTimeEntries(taskId: number | null) {
     isLoading: query.isLoading,
     addManualEntry: addManualEntry.mutate,
     isAddingManualEntry: addManualEntry.isPending,
+    updateReflection: updateReflection.mutate,
     deleteEntry: deleteEntry.mutate,
     isDeletingEntryId: deleteEntry.isPending ? deleteEntry.variables ?? null : null,
   };

@@ -1,5 +1,5 @@
 import React from "react";
-import { formatTime, getTimerColorClass } from "@/lib/pomodoro-format";
+import { formatTime, getTimerColorClass } from "@/lib/focus-format";
 
 interface TimerDisplayProps {
     timeLeft: number;

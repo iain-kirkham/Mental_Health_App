@@ -1,5 +1,6 @@
 package dev.iainkirkham.mental_planner_backend.timeentries.dto;
 
+import dev.iainkirkham.mental_planner_backend.timeentries.EnergyRating;
 import dev.iainkirkham.mental_planner_backend.timeentries.TimeEntrySource;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -20,5 +21,7 @@ public class TaskTimeEntryResponseDTO {
     private int minutes;
     private LocalDate entryDate;
     private TimeEntrySource source;
-    private String note;
+    private String notes;
+    private Short score;
+    private EnergyRating energyRating;
 }

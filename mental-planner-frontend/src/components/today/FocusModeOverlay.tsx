@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import { TimerDisplay } from '@/components/TimerDisplay'
 import { useKeyedDraft } from '@/hooks/useKeyedDraft'
 import { useTimerStore } from '@/store/timerStore'
-import { useCountdownSession } from '@/hooks/useTaskTimer'
+import { useFocusSession } from '@/hooks/useTaskTimer'
 import type { TaskResponseDTO } from '@/types'
 
 const PRESETS_MINUTES = [10, 25, 50]
@@ -18,20 +18,20 @@ interface FocusModeOverlayProps {
 }
 
 export default function FocusModeOverlay({ task, onOpenChange }: FocusModeOverlayProps) {
-  // Read directly rather than through useCountdownSession: this is the exact session length to
+  // Read directly rather than through useFocusSession: this is the exact session length to
   // resume with (not re-derived from secondsLeft/elapsed, which would drift under rounding).
   const sessionLengthMinutes = useTimerStore((state) => state.sessionLengthMinutes)
   const startTimer = useTimerStore((state) => state.startTimer)
   const pauseTimer = useTimerStore((state) => state.pauseTimer)
   const cancelTimer = useTimerStore((state) => state.cancelTimer)
 
-  const { isActiveHere: hasSession, running, secondsLeft, defaultMinutes } = useCountdownSession(task)
+  const { isActiveHere: hasSession, running, secondsLeft, defaultMinutes } = useFocusSession(task)
   // Keyed by task id since this overlay stays mounted across different tasks (task changes via
   // prop, no remount) - a bare useState would leak the previous task's manual choice forward.
   const [selectedPreset, setManualPresetMinutes] = useKeyedDraft(task?.id ?? null, defaultMinutes)
 
   // A session that was active for this task and then vanished (completed or cancelled) means the
-  // countdown's own lifecycle ended it - the reflection prompt (GlobalPomodoroModal) takes over
+  // the Focus session's own lifecycle ended it - the reflection prompt (GlobalFocusReflectionModal) takes over
   // from here, so this overlay should step aside rather than sit open showing a reset 0:00 ring.
   const hadSessionRef = useRef(false)
   useEffect(() => {
@@ -52,7 +52,7 @@ export default function FocusModeOverlay({ task, onOpenChange }: FocusModeOverla
       return
     }
     startTimer(task.id, task.actualMinutes, {
-      mode: 'countdown',
+      mode: 'focus',
       sessionLengthMinutes: hasSession ? sessionLengthMinutes! : selectedPreset,
     })
   }

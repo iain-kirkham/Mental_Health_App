@@ -4,12 +4,12 @@ import dev.iainkirkham.mental_planner_backend.config.TestAuthenticationConfig;
 import dev.iainkirkham.mental_planner_backend.config.TestcontainersConfiguration;
 import dev.iainkirkham.mental_planner_backend.mood.MoodEntry;
 import dev.iainkirkham.mental_planner_backend.mood.MoodEntryRepository;
-import dev.iainkirkham.mental_planner_backend.pomodoro.PomodoroSession;
-import dev.iainkirkham.mental_planner_backend.pomodoro.PomodoroSessionRepository;
 import dev.iainkirkham.mental_planner_backend.subtasks.Subtask;
 import dev.iainkirkham.mental_planner_backend.subtasks.SubtaskRepository;
 import dev.iainkirkham.mental_planner_backend.tasks.Task;
 import dev.iainkirkham.mental_planner_backend.tasks.TaskRepository;
+import dev.iainkirkham.mental_planner_backend.timeentries.TaskTimeEntry;
+import dev.iainkirkham.mental_planner_backend.timeentries.TaskTimeEntryRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.DefaultApplicationArguments;
@@ -51,7 +51,7 @@ class EncryptionBackfillRunnerIntegrationTest {
     private MoodEntryRepository moodEntryRepository;
 
     @Autowired
-    private PomodoroSessionRepository pomodoroSessionRepository;
+    private TaskTimeEntryRepository taskTimeEntryRepository;
 
     @Test
     void backfill_encryptsLegacyPlaintextTaskAndSubtaskRowsAndTheyRoundTrip() {
@@ -100,17 +100,17 @@ class EncryptionBackfillRunnerIntegrationTest {
     }
 
     @Test
-    void backfill_encryptsLegacyPomodoroSessionNotesAndTheyRoundTrip() {
-        Long sessionId = jdbcTemplate.queryForObject(
-                "INSERT INTO pomodoro_session (start_time, end_time, duration, notes, user_id) " +
-                        "VALUES (now(), now(), 25, ?, ?) RETURNING id",
+    void backfill_encryptsLegacyTaskTimeEntryNotesAndTheyRoundTrip() {
+        Long entryId = jdbcTemplate.queryForObject(
+                "INSERT INTO task_time_entry (started_at, ended_at, minutes, entry_date, source, notes, user_id) " +
+                        "VALUES (now(), now(), 25, CURRENT_DATE, 'FOCUS', ?, ?) RETURNING id",
                 Long.class, "Struggled to focus", TestAuthenticationConfig.TEST_USER_ID);
 
         backfillRunner.run(new DefaultApplicationArguments());
 
-        assertColumnIsEncrypted("pomodoro_session", "notes", sessionId);
+        assertColumnIsEncrypted("task_time_entry", "notes", entryId);
 
-        PomodoroSession reloaded = pomodoroSessionRepository.findById(sessionId).orElseThrow();
+        TaskTimeEntry reloaded = taskTimeEntryRepository.findById(entryId).orElseThrow();
         assertThat(reloaded.getNotes()).isEqualTo("Struggled to focus");
     }
 

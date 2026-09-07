@@ -9,7 +9,7 @@ export function formatTime(seconds: number): string {
   return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
 }
 
-/** Text colour for a countdown, shifting from calm to urgent as time runs out. */
+/** Text colour for a focus timer, shifting from calm to urgent as time runs out. */
 export function getTimerColorClass(timeLeft: number, totalTime: number): string {
   const percentRemaining = totalTime > 0 ? timeLeft / totalTime : 0
   if (percentRemaining > 0.66) return 'text-chart-2'

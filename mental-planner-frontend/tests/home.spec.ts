@@ -20,23 +20,23 @@ test.describe('Home Page', () => {
 
   test('should display both feature cards', async ({ page }) => {
     // Scope to the page main to avoid header/nav duplicates
-    const pomodoroCard = page.getByRole('main').getByRole('link', { name: 'Pomodoro Timer' });
-    await expect(pomodoroCard).toBeVisible();
-    await expect(page.getByText('Manage hyperfocus sessions with customizable timers')).toBeVisible();
+    const focusCard = page.getByRole('main').getByRole('link', { name: 'Focus sessions' });
+    await expect(focusCard).toBeVisible();
+    await expect(page.getByText('Run a focus timer against a task, or just start one and see where it goes.')).toBeVisible();
 
     const moodCard = page.getByRole('main').getByRole('link', { name: 'Mood Tracker' });
     await expect(moodCard).toBeVisible();
     await expect(page.getByText('Log daily moods with customizable factors')).toBeVisible();
   });
 
-  test('should navigate to Pomodoro page when clicking the card', async ({ page }) => {
-    const link = page.getByRole('link', { name: 'Pomodoro Timer' });
+  test('should navigate to Focus page when clicking the card', async ({ page }) => {
+    const link = page.getByRole('link', { name: 'Focus sessions' });
     await expect(link).toBeVisible();
 
     // Wait for the URL change and click together to avoid a race condition
-    await Promise.all([page.waitForURL('**/pomodoro'), link.click()]);
+    await Promise.all([page.waitForURL('**/focus'), link.click()]);
 
-    await expect(page.getByRole('heading', { level: 1, name: /pomodoro timer/i })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: /focus timer/i })).toBeVisible();
   });
 
   test('should navigate to Mood Tracker page when clicking the card', async ({ page }) => {
@@ -50,15 +50,15 @@ test.describe('Home Page', () => {
     await expect(page.getByRole('heading', { level: 1, name: /how are you feeling/i })).toBeVisible();
   });
 
-  test('should navigate to Pomodoro page using the Start Timer button', async ({ page }) => {
-    const startButton = page.getByRole('main').getByRole('button', { name: 'Start Timer' });
+  test('should navigate to Focus page using the Start a session button', async ({ page }) => {
+    const startButton = page.getByRole('main').getByRole('button', { name: 'Start a session' });
     await expect(startButton).toBeVisible();
 
     // Wait for navigation and click together to avoid race conditions
-    await Promise.all([page.waitForURL('**/pomodoro'), startButton.click()]);
+    await Promise.all([page.waitForURL('**/focus'), startButton.click()]);
 
     // Optionally verify page content after navigation
-    await expect(page.getByRole('heading', { level: 1, name: /pomodoro timer/i })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: /focus timer/i })).toBeVisible();
   });
 
   test('should navigate to Mood Tracker page using the Track Mood button', async ({ page }) => {
@@ -77,13 +77,13 @@ test.describe('Home Page', () => {
   });
 
   test('should have proper icons displayed', async ({ page }) => {
-    // Scope to main and check Pomodoro card icon
-    const pomodoroCard = page.getByRole('main').getByRole('link', { name: 'Pomodoro Timer' });
-    await pomodoroCard.waitFor({ state: 'visible', timeout: 10000 });
-    await expect(pomodoroCard).toBeVisible();
-    const pomodoroIcon = pomodoroCard.locator('img, svg').first();
-    await pomodoroIcon.waitFor({ state: 'visible', timeout: 5000 });
-    await expect(pomodoroIcon).toBeVisible();
+    // Scope to main and check Focus sessions card icon
+    const focusCard = page.getByRole('main').getByRole('link', { name: 'Focus sessions' });
+    await focusCard.waitFor({ state: 'visible', timeout: 10000 });
+    await expect(focusCard).toBeVisible();
+    const focusIcon = focusCard.locator('img, svg').first();
+    await focusIcon.waitFor({ state: 'visible', timeout: 5000 });
+    await expect(focusIcon).toBeVisible();
 
     // Scope to main and check Mood Tracker card icon
     const moodCard = page.getByRole('main').getByRole('link', { name: 'Mood Tracker' });
@@ -101,7 +101,7 @@ test.describe('Home Page', () => {
     await expect(page.getByRole('heading', { name: 'ADHD Focus Companion' })).toBeVisible();
 
     const main = page.getByRole('main');
-    await expect(main.getByText('Pomodoro Timer')).toBeVisible();
+    await expect(main.getByText('Focus sessions')).toBeVisible();
     await expect(main.getByText('Mood Tracker')).toBeVisible();
   });
 });

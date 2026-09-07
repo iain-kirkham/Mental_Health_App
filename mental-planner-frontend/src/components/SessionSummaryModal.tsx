@@ -2,7 +2,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import MoodOption from "@/components/mood/MoodOption";
-import { getScoreEmoji, ENERGY_RATING_OPTIONS } from "@/lib/pomodoro-format";
+import { getScoreEmoji, ENERGY_RATING_OPTIONS } from "@/lib/focus-format";
 import type { EnergyRating } from "@/types";
 
 interface SessionSummaryModalProps {

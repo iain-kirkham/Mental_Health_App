@@ -2,11 +2,12 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
-import usePomodoroSession from "@/hooks/usePomodoroSession";
+import useFocusReflection, { type CompletedFocusRun } from "@/hooks/useFocusReflection";
+import { claimFocusEntry } from "@/lib/focusEntryHandoff";
 import { useTimerStore } from "@/store/timerStore";
-import type { EnergyRating, PomodoroSessionCreationDTO } from "@/types";
+import type { EnergyRating } from "@/types";
 
-type PomodoroSessionContextValue = {
+type FocusReflectionContextValue = {
   showSessionForm: boolean;
   setShowSessionForm: (v: boolean) => void;
   score: number;
@@ -21,25 +22,25 @@ type PomodoroSessionContextValue = {
   handleSaveSession: () => Promise<void>;
 };
 
-const PomodoroSessionContext = createContext<PomodoroSessionContextValue | null>(null);
+const FocusReflectionContext = createContext<FocusReflectionContextValue | null>(null);
 
-// Countdown time-tracking itself lives in useTimerStore (shared with the plain task stopwatch,
-// so a task's tracked time has exactly one writer). This context owns only what's left once a
-// countdown session completes: the score/energy/notes reflection form, and saving it as a
-// PomodoroSession journal entry.
-export function PomodoroSessionProvider({ children }: { children: React.ReactNode }) {
+// Focus-session time-tracking itself lives in useTimerStore (shared with the plain task
+// stopwatch, so a task's tracked time has exactly one writer). This context owns only what's
+// left once a focus session completes: the score/energy/notes reflection form, and attaching it
+// to the entry TimerStoreBridge already logged for that run.
+export function FocusReflectionProvider({ children }: { children: React.ReactNode }) {
   const { getToken } = useAuth();
-  const { isSubmitting, submitStatus, errorMessage, saveSession, setSubmitStatus } = usePomodoroSession(getToken);
+  const { isSubmitting, submitStatus, errorMessage, saveReflection, setSubmitStatus } = useFocusReflection(getToken);
 
   const [showSessionForm, setShowSessionForm] = useState(false);
   const [score, setScore] = useState(3);
   const [notes, setNotes] = useState("");
   const [energyRating, setEnergyRating] = useState<EnergyRating | null>(null);
 
-  // Captured from timerStore at the moment a countdown session completes, since timerStore
-  // clears its own session fields as part of that same completion - by the time the user fills
-  // in and saves the reflection form, this ref is the only place that data is still available.
-  const completedSessionRef = useRef<{ taskId: number | null; durationMinutes: number; startedAt: string | null } | null>(null);
+  // Captured from timerStore at the moment a focus session completes, since timerStore clears
+  // its own session fields as part of that same completion - by the time the user fills in and
+  // saves the reflection form, this ref is the only place that data is still available.
+  const completedSessionRef = useRef<{ taskId: number | null; runKey: string | null; durationMinutes: number; startedAt: string | null } | null>(null);
   const statusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -59,17 +60,14 @@ export function PomodoroSessionProvider({ children }: { children: React.ReactNod
 
   const handleSaveSession = useCallback(async () => {
     const completed = completedSessionRef.current;
-    const sessionData: PomodoroSessionCreationDTO = {
-      startTime: completed?.startedAt ?? null,
-      endTime: new Date().toISOString(),
-      duration: completed?.durationMinutes ?? 0,
-      score,
-      notes: notes.trim(),
-      energyRating,
+    const entryId = completed?.runKey ? await claimFocusEntry(completed.runKey) : null;
+    const completedRun: CompletedFocusRun = {
       taskId: completed?.taskId ?? null,
+      durationMinutes: completed?.durationMinutes ?? 0,
+      startedAt: completed?.startedAt ?? null,
     };
 
-    const result = await saveSession(sessionData);
+    const result = await saveReflection(entryId, completedRun, { score, notes: notes.trim(), energyRating });
 
     if (result.ok) {
       setShowSessionForm(false);
@@ -81,9 +79,9 @@ export function PomodoroSessionProvider({ children }: { children: React.ReactNod
       if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current);
       statusTimeoutRef.current = setTimeout(() => setSubmitStatus("idle"), 3000);
     }
-  }, [score, notes, energyRating, saveSession, setSubmitStatus]);
+  }, [score, notes, energyRating, saveReflection, setSubmitStatus]);
 
-  const value = useMemo<PomodoroSessionContextValue>(
+  const value = useMemo<FocusReflectionContextValue>(
     () => ({
       showSessionForm,
       setShowSessionForm,
@@ -101,13 +99,13 @@ export function PomodoroSessionProvider({ children }: { children: React.ReactNod
     [showSessionForm, score, notes, energyRating, isSubmitting, submitStatus, errorMessage, handleSaveSession],
   );
 
-  return <PomodoroSessionContext.Provider value={value}>{children}</PomodoroSessionContext.Provider>;
+  return <FocusReflectionContext.Provider value={value}>{children}</FocusReflectionContext.Provider>;
 }
 
-export function usePomodoroSessionContext() {
-  const ctx = useContext(PomodoroSessionContext);
+export function useFocusReflectionContext() {
+  const ctx = useContext(FocusReflectionContext);
   if (!ctx) {
-    throw new Error("usePomodoroSessionContext must be used within a PomodoroSessionProvider");
+    throw new Error("useFocusReflectionContext must be used within a FocusReflectionProvider");
   }
   return ctx;
 }
